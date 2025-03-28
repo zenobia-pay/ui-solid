@@ -1,0 +1,35 @@
+{
+  "name": "@zenobia/ui-solid",
+  "version": "0.0.1",
+  "description": "Solid.js UI components for Zenobia Pay",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "zenobia",
+    "payments",
+    "solid-js",
+    "ui",
+    "components"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Zenobia Pay",
+  "license": "MIT",
+  "dependencies": {
+    "@zenobia/client": "^0.0.3",
+    "solid-js": "^1.7.0"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
