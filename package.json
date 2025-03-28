@@ -1,13 +1,13 @@
 {
   "name": "@zenobia/ui-solid",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Solid.js UI components for Zenobia Pay",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "vite build",
     "test": "echo \"No tests yet\""
   },
   "keywords": [
@@ -23,7 +23,7 @@
   "author": "Zenobia Pay",
   "license": "MIT",
   "dependencies": {
-    "@zenobia/client": "^0.0.3",
+    "@zenobia/client": "^0.0.4",
     "solid-js": "^1.7.0"
   },
   "peerDependencies": {
@@ -31,6 +31,8 @@
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.5",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vite": "^6.2.3",
+    "vite-plugin-solid": "^2.11.6"
   }
 }
