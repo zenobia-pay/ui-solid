@@ -30,6 +30,7 @@
     "solid-js": "^1.7.0"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.5",
     "typescript": "^5.0.0"
   }
 }
