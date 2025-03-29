@@ -1,13 +1,18 @@
 import { createSignal, Component } from "solid-js";
-import { ZenobiaClient } from "@zenobia/client";
+import { ZenobiaClient, StatementItem } from "@zenobia/client";
+
+export interface CreateTransferRequestResponse {
+  transferRequestId: string;
+  merchantId: string;
+}
 
 interface ZenobiaPaymentButtonProps {
   amount: number;
-  currency: string;
-  description?: string;
+  url: string; // Full URL to the payment endpoint
+  statementItems?: StatementItem[]; // Optional statement items
   buttonText?: string;
   buttonClass?: string;
-  onSuccess?: (payment: { id: number }) => void;
+  onSuccess?: (response: CreateTransferRequestResponse) => void;
   onError?: (error: Error) => void;
 }
 
@@ -19,20 +24,33 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   const handleClick = async () => {
     try {
       setLoading(true);
-      // Initialize client with default parameters as per the implementation
-      const client = new ZenobiaClient("test_key", "https://api.zenobia.pay");
+      // Initialize client with no parameters as per the updated implementation
+      const client = new ZenobiaClient();
 
-      // Call createPayment with the correct parameters
-      const paymentId = await client.createPayment(
+      // Create default statement item if none provided
+      const statementItems = props.statementItems || [
+        {
+          name: "Payment",
+          amount: props.amount,
+        },
+      ];
+
+      // Call createTransferRequest with the full URL
+      const transferId = await client.createTransferRequest(
+        props.url,
         props.amount,
-        props.currency,
-        props.description || `Payment of ${props.amount} ${props.currency}`
+        statementItems
       );
 
       setLoading(false);
 
       if (props.onSuccess) {
-        props.onSuccess({ id: paymentId });
+        // The actual response would come from the merchant's backend
+        // This is a placeholder until we get the actual response structure
+        props.onSuccess({
+          transferRequestId: String(transferId),
+          merchantId: "merchant-id", // This would normally come from the response
+        });
       }
     } catch (error) {
       setLoading(false);
@@ -49,9 +67,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
       onClick={handleClick}
       disabled={loading()}
     >
-      {loading()
-        ? "Processing..."
-        : props.buttonText || `Pay ${props.amount} ${props.currency}`}
+      {loading() ? "Processing..." : props.buttonText || `Pay ${props.amount}`}
     </button>
   );
 };
