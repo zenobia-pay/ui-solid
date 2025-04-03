@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.4
+
+- Add the QR code to the payment button.
+
 ## 0.0.3
 
 - Fix createTransferRequest URL.
