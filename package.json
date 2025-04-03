@@ -1,6 +1,6 @@
 {
   "name": "@zenobia/ui-solid",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Solid.js UI components for Zenobia Pay",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -23,7 +23,7 @@
   "author": "Zenobia Pay",
   "license": "MIT",
   "dependencies": {
-    "@zenobia/client": "^0.0.6",
+    "@zenobia/client": "^0.0.7",
     "solid-js": "^1.7.0"
   },
   "peerDependencies": {
