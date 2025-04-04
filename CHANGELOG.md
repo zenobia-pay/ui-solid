@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.6
+
+- Change the QR code a bit
+
 ## 0.0.5
 
 - Bump dependency.
