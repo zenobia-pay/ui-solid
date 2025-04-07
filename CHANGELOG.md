@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.0.6
+## 0.0.8
+
+- Fix the QR code.
+
+## 0.0.7
 
 - Change the QR code a bit.
 
