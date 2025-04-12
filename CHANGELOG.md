@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.10
+
+- Bump dependency.
+
+## 0.0.9
+
+- Switch to websockets over polling.
+
 ## 0.0.8
 
 - Fix the QR code.
