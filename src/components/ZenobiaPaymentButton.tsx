@@ -5,12 +5,20 @@ import {
   onCleanup,
   Show,
 } from "solid-js";
-import { ZenobiaClient, StatementItem } from "@zenobia/client";
+import { ZenobiaClient } from "@zenobia/client";
 import QRCode from "qrcode";
+
+// Import or define the StatementItem interface to match the client
+export interface StatementItem {
+  name: string;
+  amount: number;
+}
 
 export interface CreateTransferRequestResponse {
   transferRequestId: string;
   merchantId: string;
+  expiry?: number;
+  signature?: string;
 }
 
 // Define the TransferStatus enum
@@ -22,6 +30,12 @@ export enum TransferStatus {
   CANCELLED = "CANCELLED",
 }
 
+// Define interface for client TransferStatus
+interface ClientTransferStatus {
+  status: string;
+  [key: string]: any;
+}
+
 interface ZenobiaPaymentButtonProps {
   amount: number;
   url: string; // Full URL to the payment endpoint
@@ -29,7 +43,6 @@ interface ZenobiaPaymentButtonProps {
   buttonText?: string;
   buttonClass?: string;
   qrCodeSize?: number;
-  pollingInterval?: number;
   onSuccess?: (response: CreateTransferRequestResponse) => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
@@ -47,8 +60,8 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     TransferStatus.PENDING
   );
   const [error, setError] = createSignal<string | null>(null);
-  const [isPolling, setIsPolling] = createSignal(false);
-  const [pollingIntervalId, setPollingIntervalId] = createSignal<number | null>(
+  const [isConnected, setIsConnected] = createSignal(false);
+  const [zenobiaClient, setZenobiaClient] = createSignal<ZenobiaClient | null>(
     null
   );
 
@@ -70,8 +83,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
       })
         .then((url) => {
           setQrCodeDataUrl(url);
-          // Start polling for transfer status updates
-          startPollingTransferStatus(request.transferRequestId);
         })
         .catch((err) => {
           console.error("Error generating QR code:", err);
@@ -80,81 +91,58 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     }
   });
 
-  // Start polling for transfer status updates
-  const startPollingTransferStatus = (transferRequestId: string) => {
-    if (isPolling()) return; // Prevent multiple polling instances
+  // Handle WebSocket status update
+  const handleStatusUpdate = (status: ClientTransferStatus) => {
+    console.log("Received status update:", status);
 
-    setIsPolling(true);
+    // Convert API status to our enum
+    let currentStatus: TransferStatus;
+    switch (status.status) {
+      case "COMPLETED":
+        currentStatus = TransferStatus.COMPLETED;
+        break;
+      case "FAILED":
+        currentStatus = TransferStatus.FAILED;
+        break;
+      case "CANCELLED":
+        currentStatus = TransferStatus.CANCELLED;
+        break;
+      case "IN_FLIGHT":
+        currentStatus = TransferStatus.IN_FLIGHT;
+        break;
+      default:
+        currentStatus = TransferStatus.PENDING;
+    }
 
-    const intervalId = window.setInterval(async () => {
-      try {
-        // Direct API call to get transfer status since ZenobiaClient doesn't have this method
-        const statusUrl = `https://api.zenobiapay.com/transfers/${transferRequestId}/status`;
-        const response = await fetch(statusUrl);
+    setTransferStatus(currentStatus);
 
-        if (!response.ok) {
-          throw new Error(
-            `Error polling transfer status: ${response.statusText}`
-          );
-        }
-
-        const { status } = await response.json();
-
-        // Convert API status to our enum
-        let currentStatus: TransferStatus;
-        switch (status) {
-          case "COMPLETED":
-            currentStatus = TransferStatus.COMPLETED;
-            break;
-          case "FAILED":
-            currentStatus = TransferStatus.FAILED;
-            break;
-          case "CANCELLED":
-            currentStatus = TransferStatus.CANCELLED;
-            break;
-          case "IN_FLIGHT":
-            currentStatus = TransferStatus.IN_FLIGHT;
-            break;
-          default:
-            currentStatus = TransferStatus.PENDING;
-        }
-
-        setTransferStatus(currentStatus);
-
-        // Call the onStatusChange callback if provided
-        if (props.onStatusChange) {
-          props.onStatusChange(currentStatus);
-        }
-
-        // Stop polling if transfer is in a terminal state
-        if (
-          currentStatus === TransferStatus.COMPLETED ||
-          currentStatus === TransferStatus.FAILED ||
-          currentStatus === TransferStatus.CANCELLED
-        ) {
-          stopPollingTransferStatus();
-        }
-      } catch (err) {
-        console.error("Error polling transfer status:", err);
-        // Don't stop polling on error, just log it
-      }
-    }, props.pollingInterval || 5000); // Default to 5 seconds if not specified
-
-    setPollingIntervalId(intervalId);
+    // Call the onStatusChange callback if provided
+    if (props.onStatusChange) {
+      props.onStatusChange(currentStatus);
+    }
   };
 
-  // Stop polling
-  const stopPollingTransferStatus = () => {
-    if (pollingIntervalId()) {
-      window.clearInterval(pollingIntervalId()!);
-      setPollingIntervalId(null);
-    }
-    setIsPolling(false);
+  // Handle WebSocket error
+  const handleWebSocketError = (errorMsg: string) => {
+    console.error("WebSocket error:", errorMsg);
+    setError(errorMsg);
+  };
+
+  // Handle WebSocket connection status change
+  const handleConnectionChange = (connected: boolean) => {
+    console.log(
+      "WebSocket connection status:",
+      connected ? "Connected" : "Disconnected"
+    );
+    setIsConnected(connected);
   };
 
   // Cleanup on component unmount
   onCleanup(() => {
-    stopPollingTransferStatus();
+    const client = zenobiaClient();
+    if (client) {
+      client.disconnect();
+    }
   });
 
   // Function to get badge color based on status
@@ -175,8 +163,9 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   const handleClick = async () => {
     try {
       setLoading(true);
-      // Initialize client with no parameters as per the updated implementation
+      // Initialize client
       const client = new ZenobiaClient();
+      setZenobiaClient(client);
 
       // Create default statement item if none provided
       const statementItems = props.statementItems || [
@@ -186,20 +175,22 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         },
       ];
 
-      // Call createTransferRequest with the full URL
-      const transfer = (await client.createTransferRequest(
+      // Call createTransferAndListen with the full URL and callbacks
+      const transfer = await client.createTransferAndListen(
         props.url,
         props.amount,
-        statementItems
-      )) as unknown as {
-        transferRequestId: string;
-        merchantId: string;
-      };
+        statementItems,
+        handleStatusUpdate,
+        handleWebSocketError,
+        handleConnectionChange
+      );
 
       // Store transfer request data
       setTransferRequest({
         transferRequestId: transfer.transferRequestId,
         merchantId: transfer.merchantId,
+        expiry: transfer.expiry,
+        signature: transfer.signature,
       });
 
       setShowQR(true);
@@ -209,6 +200,8 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         props.onSuccess({
           transferRequestId: transfer.transferRequestId,
           merchantId: transfer.merchantId,
+          expiry: transfer.expiry,
+          signature: transfer.signature,
         });
       }
     } catch (error) {
@@ -246,7 +239,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
                 </p>
                 <div class="mt-3">
                   <div class={`badge ${getBadgeClass()} gap-2`}>
-                    {isPolling() &&
+                    {isConnected() &&
                     transferStatus() !== TransferStatus.COMPLETED &&
                     transferStatus() !== TransferStatus.FAILED &&
                     transferStatus() !== TransferStatus.CANCELLED ? (
@@ -258,6 +251,15 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
                       <span>Status: {transferStatus() || "Waiting"}</span>
                     )}
                   </div>
+                  {isConnected() ? (
+                    <div class="badge badge-outline badge-xs badge-success mt-2">
+                      WebSocket Connected
+                    </div>
+                  ) : (
+                    <div class="badge badge-outline badge-xs badge-warning mt-2">
+                      WebSocket Disconnected
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
