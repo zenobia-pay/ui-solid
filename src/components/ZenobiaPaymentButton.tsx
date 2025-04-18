@@ -64,20 +64,24 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   const [zenobiaClient, setZenobiaClient] = createSignal<ZenobiaClient | null>(
     null
   );
+  const [isAnimating, setIsAnimating] = createSignal(false);
 
   // Generate QR code when transfer request is created
   createEffect(() => {
     const request = transferRequest();
     if (request?.transferRequestId && request?.merchantId) {
-      const qrData = {
-        transferRequestId: request.transferRequestId,
-        merchantId: request.merchantId,
-        amount: props.amount,
-        status: transferStatus(),
-      };
+      const transferIdNoDashes = request.transferRequestId.replace(/-/g, "");
+      // Convert to base64URL format (no padding)
+      const base64TransferId = btoa(transferIdNoDashes)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+      const qrString = `https://zenobiapay.com/clip?id=${base64TransferId}`;
 
-      QRCode.toDataURL(JSON.stringify(qrData), {
-        errorCorrectionLevel: "H",
+      console.log("Transfer ID:", request.transferRequestId);
+      console.log("Base64 Transfer ID:", qrString);
+      QRCode.toDataURL(qrString, {
+        errorCorrectionLevel: "M",
         margin: 1,
         width: props.qrCodeSize || 200,
       })
@@ -163,6 +167,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   const handleClick = async () => {
     try {
       setLoading(true);
+      setIsAnimating(true);
       // Initialize client
       const client = new ZenobiaClient();
       setZenobiaClient(client);
@@ -193,8 +198,12 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         signature: transfer.signature,
       });
 
-      setShowQR(true);
-      setLoading(false);
+      // Add a small delay for the animation
+      setTimeout(() => {
+        setShowQR(true);
+        setLoading(false);
+        setIsAnimating(false);
+      }, 500);
 
       if (props.onSuccess) {
         props.onSuccess({
@@ -206,6 +215,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
       }
     } catch (error) {
       setLoading(false);
+      setIsAnimating(false);
       setError(error instanceof Error ? error.message : "An error occurred");
 
       if (props.onError && error instanceof Error) {
@@ -215,70 +225,47 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   };
 
   return (
-    <Show
-      when={!showQR()}
-      fallback={
-        <div class="flex flex-col items-center">
-          <Show
-            when={qrCodeDataUrl()}
-            fallback={
-              <div class="w-48 h-48 flex items-center justify-center">
-                <span class="loading">Loading QR code...</span>
-              </div>
-            }
-          >
-            <div class="card bg-base-100 shadow-sm">
-              <div class="card-body p-4 items-center">
-                <img
-                  src={qrCodeDataUrl() || ""}
-                  alt="Transfer QR Code"
-                  class="w-48 h-48"
-                />
-                <p class="text-xs opacity-70 text-center mt-2">
-                  Scan to verify transfer details
-                </p>
-                <div class="mt-3">
-                  <div class={`badge ${getBadgeClass()} gap-2`}>
-                    {isConnected() &&
-                    transferStatus() !== TransferStatus.COMPLETED &&
-                    transferStatus() !== TransferStatus.FAILED &&
-                    transferStatus() !== TransferStatus.CANCELLED ? (
-                      <span class="flex items-center">
-                        <span class="loading loading-spinner loading-xs"></span>
-                        Status: {transferStatus() || "Waiting"}
-                      </span>
-                    ) : (
-                      <span>Status: {transferStatus() || "Waiting"}</span>
-                    )}
-                  </div>
-                  {isConnected() ? (
-                    <div class="badge badge-outline badge-xs badge-success mt-2">
-                      WebSocket Connected
-                    </div>
-                  ) : (
-                    <div class="badge badge-outline badge-xs badge-warning mt-2">
-                      WebSocket Disconnected
-                    </div>
-                  )}
+    <div class="relative w-[240px]">
+      <Show
+        when={!showQR()}
+        fallback={
+          <div class="flex flex-col items-center">
+            <Show
+              when={qrCodeDataUrl()}
+              fallback={
+                <div class="w-[240px] h-[120px] flex items-center justify-center">
+                  <span class="loading">Loading QR code...</span>
+                </div>
+              }
+            >
+              <div class="card bg-base-100 shadow-sm p-4 w-[240px] h-[120px] transition-all duration-300 transform">
+                <div class="card-body p-4 items-center">
+                  <img
+                    src={qrCodeDataUrl() || ""}
+                    alt="Transfer QR Code"
+                    class="w-full h-full object-contain"
+                  />
                 </div>
               </div>
-            </div>
-          </Show>
-          <Show when={error()}>
-            <div class="mt-2 text-xs text-error">{error()}</div>
-          </Show>
-        </div>
-      }
-    >
-      <button
-        class={`zenobia-payment-button ${props.buttonClass || ""}`}
-        onClick={handleClick}
-        disabled={loading()}
+            </Show>
+            <Show when={error()}>
+              <div class="mt-2 text-xs text-error">{error()}</div>
+            </Show>
+          </div>
+        }
       >
-        {loading()
-          ? "Processing..."
-          : props.buttonText || `Pay ${props.amount}`}
-      </button>
-    </Show>
+        <button
+          class={`zenobia-payment-button rounded-lg px-6 py-3 w-[240px] h-[120px] transition-all duration-300 transform ${
+            isAnimating() ? "scale-95 opacity-50" : ""
+          } ${props.buttonClass || ""}`}
+          onClick={handleClick}
+          disabled={loading()}
+        >
+          {loading()
+            ? "Processing..."
+            : props.buttonText || `Pay ${props.amount}`}
+        </button>
+      </Show>
+    </div>
   );
 };

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.11
+
+- Correct QR Code format.
+
 ## 0.0.10
 
 - Bump dependency.
