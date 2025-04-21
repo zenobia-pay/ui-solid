@@ -56,6 +56,17 @@ enum AnimationState {
   QR_VISIBLE = "QR_VISIBLE",
 }
 
+// Utility function to detect iOS devices
+const isIOS = (): boolean => {
+  if (typeof window === "undefined") return false;
+
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  return (
+    /iphone|ipad|ipod/.test(userAgent) ||
+    (userAgent.includes("mac") && "ontouchend" in document)
+  );
+};
+
 export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   props
 ) => {
@@ -89,18 +100,25 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
 
       console.log("Transfer ID:", request.transferRequestId);
       console.log("Base64 Transfer ID:", qrString);
-      QRCode.toDataURL(qrString, {
-        errorCorrectionLevel: "M",
-        margin: 1,
-        width: props.qrCodeSize || 200,
-      })
-        .then((url) => {
-          setQrCodeDataUrl(url);
+
+      // Only generate QR code if not on iOS
+      if (!isIOS()) {
+        QRCode.toDataURL(qrString, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: props.qrCodeSize || 200,
         })
-        .catch((err) => {
-          console.error("Error generating QR code:", err);
-          setError("Failed to generate QR code");
-        });
+          .then((url) => {
+            setQrCodeDataUrl(url);
+          })
+          .catch((err) => {
+            console.error("Error generating QR code:", err);
+            setError("Failed to generate QR code");
+          });
+      } else {
+        // On iOS, open the App Clip directly
+        window.location.href = qrString;
+      }
     }
   });
 
@@ -270,11 +288,12 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
           : props.buttonText || `Pay ${props.amount}`}
       </button>
 
-      {/* QR Code Tooltip */}
+      {/* QR Code Tooltip - Only show if not on iOS */}
       <Show
         when={
-          animationState() === AnimationState.QR_EXPANDING ||
-          animationState() === AnimationState.QR_VISIBLE
+          !isIOS() &&
+          (animationState() === AnimationState.QR_EXPANDING ||
+            animationState() === AnimationState.QR_VISIBLE)
         }
       >
         <div

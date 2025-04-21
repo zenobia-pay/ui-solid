@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.13
+
+- Add iOS Device checking
+
 ## 0.0.12
 
 - Better QR code design.
