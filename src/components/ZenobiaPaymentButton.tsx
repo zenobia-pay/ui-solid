@@ -48,11 +48,21 @@ interface ZenobiaPaymentButtonProps {
   onStatusChange?: (status: TransferStatus) => void;
 }
 
+// Define animation states
+enum AnimationState {
+  INITIAL = "INITIAL",
+  BUTTON_CLOSING = "BUTTON_CLOSING",
+  QR_EXPANDING = "QR_EXPANDING",
+  QR_VISIBLE = "QR_VISIBLE",
+}
+
 export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   props
 ) => {
   const [loading, setLoading] = createSignal<boolean>(false);
-  const [showQR, setShowQR] = createSignal<boolean>(false);
+  const [animationState, setAnimationState] = createSignal<AnimationState>(
+    AnimationState.INITIAL
+  );
   const [transferRequest, setTransferRequest] =
     createSignal<CreateTransferRequestResponse | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = createSignal<string | null>(null);
@@ -64,7 +74,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   const [zenobiaClient, setZenobiaClient] = createSignal<ZenobiaClient | null>(
     null
   );
-  const [isAnimating, setIsAnimating] = createSignal(false);
 
   // Generate QR code when transfer request is created
   createEffect(() => {
@@ -104,12 +113,34 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     switch (status.status) {
       case "COMPLETED":
         currentStatus = TransferStatus.COMPLETED;
+        // Call onSuccess callback with the transfer request data
+        if (props.onSuccess && transferRequest()) {
+          props.onSuccess(transferRequest()!);
+        }
+        // Disconnect the WebSocket client
+        const client = zenobiaClient();
+        if (client) {
+          client.disconnect();
+          setZenobiaClient(null);
+        }
         break;
       case "FAILED":
         currentStatus = TransferStatus.FAILED;
+        // Disconnect the WebSocket client
+        const failedClient = zenobiaClient();
+        if (failedClient) {
+          failedClient.disconnect();
+          setZenobiaClient(null);
+        }
         break;
       case "CANCELLED":
         currentStatus = TransferStatus.CANCELLED;
+        // Disconnect the WebSocket client
+        const cancelledClient = zenobiaClient();
+        if (cancelledClient) {
+          cancelledClient.disconnect();
+          setZenobiaClient(null);
+        }
         break;
       case "IN_FLIGHT":
         currentStatus = TransferStatus.IN_FLIGHT;
@@ -167,7 +198,8 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   const handleClick = async () => {
     try {
       setLoading(true);
-      setIsAnimating(true);
+      setAnimationState(AnimationState.BUTTON_CLOSING);
+
       // Initialize client
       const client = new ZenobiaClient();
       setZenobiaClient(client);
@@ -198,24 +230,17 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         signature: transfer.signature,
       });
 
+      // Start QR code expansion animation
+      setAnimationState(AnimationState.QR_EXPANDING);
+
       // Add a small delay for the animation
       setTimeout(() => {
-        setShowQR(true);
+        setAnimationState(AnimationState.QR_VISIBLE);
         setLoading(false);
-        setIsAnimating(false);
       }, 500);
-
-      if (props.onSuccess) {
-        props.onSuccess({
-          transferRequestId: transfer.transferRequestId,
-          merchantId: transfer.merchantId,
-          expiry: transfer.expiry,
-          signature: transfer.signature,
-        });
-      }
     } catch (error) {
       setLoading(false);
-      setIsAnimating(false);
+      setAnimationState(AnimationState.INITIAL);
       setError(error instanceof Error ? error.message : "An error occurred");
 
       if (props.onError && error instanceof Error) {
@@ -226,45 +251,74 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
 
   return (
     <div class="relative w-[240px]">
+      {/* Payment Button */}
+      <button
+        class={`w-full h-[120px] zenobia-payment-button rounded-lg px-6 py-3 transition-all duration-300 ${
+          animationState() !== AnimationState.INITIAL
+            ? "bg-gray-800 text-white cursor-not-allowed"
+            : props.buttonClass || "bg-black text-white hover:bg-gray-800"
+        }`}
+        style={{
+          "background-color":
+            animationState() !== AnimationState.INITIAL ? "#222222" : "black",
+        }}
+        onClick={handleClick}
+        disabled={loading() || animationState() !== AnimationState.INITIAL}
+      >
+        {loading()
+          ? "Processing..."
+          : props.buttonText || `Pay ${props.amount}`}
+      </button>
+
+      {/* QR Code Tooltip */}
       <Show
-        when={!showQR()}
-        fallback={
-          <div class="flex flex-col items-center">
-            <Show
-              when={qrCodeDataUrl()}
-              fallback={
-                <div class="w-[240px] h-[120px] flex items-center justify-center">
-                  <span class="loading">Loading QR code...</span>
-                </div>
-              }
-            >
-              <div class="card bg-base-100 shadow-sm p-4 w-[240px] h-[120px] transition-all duration-300 transform">
-                <div class="card-body p-4 items-center">
+        when={
+          animationState() === AnimationState.QR_EXPANDING ||
+          animationState() === AnimationState.QR_VISIBLE
+        }
+      >
+        <div
+          class={`absolute left-0 right-0 mt-2 transform transition-all duration-300 ${
+            animationState() === AnimationState.QR_EXPANDING
+              ? "opacity-0 translate-y-2"
+              : "opacity-100 translate-y-0"
+          }`}
+        >
+          {/* Caret */}
+          <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-white border-t border-l border-gray-200" />
+
+          {/* Content Container */}
+          <div class="relative bg-white rounded-xl border border-gray-200 shadow-lg p-4">
+            <div class="text-center">
+              <Show
+                when={qrCodeDataUrl()}
+                fallback={
+                  <div class="flex items-center justify-center w-full h-[140px]">
+                    <div class="w-6 h-6 border-2 border-gray-300 border-t-black rounded-full animate-spin" />
+                  </div>
+                }
+              >
+                <div class="flex justify-center">
                   <img
                     src={qrCodeDataUrl() || ""}
                     alt="Transfer QR Code"
-                    class="w-full h-full object-contain"
+                    class="w-[140px] h-[140px] object-contain"
                   />
                 </div>
-              </div>
-            </Show>
-            <Show when={error()}>
-              <div class="mt-2 text-xs text-error">{error()}</div>
-            </Show>
+              </Show>
+              <Show
+                when={error()}
+                fallback={
+                  <p class="text-sm text-gray-600 mb-3">
+                    Point your iPhone camera to pay
+                  </p>
+                }
+              >
+                <div class="text-red-500 text-xs mt-3">{error()}</div>
+              </Show>
+            </div>
           </div>
-        }
-      >
-        <button
-          class={`zenobia-payment-button rounded-lg px-6 py-3 w-[240px] h-[120px] transition-all duration-300 transform ${
-            isAnimating() ? "scale-95 opacity-50" : ""
-          } ${props.buttonClass || ""}`}
-          onClick={handleClick}
-          disabled={loading()}
-        >
-          {loading()
-            ? "Processing..."
-            : props.buttonText || `Pay ${props.amount}`}
-        </button>
+        </div>
       </Show>
     </div>
   );

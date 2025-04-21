@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.12
+
+- Better QR code design.
+
 ## 0.0.11
 
 - Correct QR Code format.
