@@ -8,7 +8,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "test": "echo \"No tests yet\""
+    "test": "echo \"No tests yet\"",
+    "build:zenobia": "vite build --config vite.zenobia.config.ts"
   },
   "keywords": [
     "zenobia",

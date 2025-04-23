@@ -268,14 +268,174 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   };
 
   return (
-    <div class="relative w-[240px]">
+    <div class="zenobia-payment-container">
+      <style>
+        {`
+          .zenobia-payment-container {
+            position: relative;
+            width: 240px;
+            z-index: 1;
+          }
+
+          .zenobia-payment-button {
+            width: 100%;
+            height: 48px;
+            border-radius: 24px;
+            padding: 0 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+
+          .zenobia-payment-button:disabled {
+            cursor: not-allowed;
+            background-color: #e5e7eb;
+            color: #9ca3af;
+            box-shadow: none;
+            transform: none;
+          }
+
+          .zenobia-payment-button:not(:disabled) {
+            background-color: black;
+            color: white;
+          }
+
+          .zenobia-payment-button:not(:disabled):hover {
+            background-color: #222222;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+
+          .zenobia-payment-button:not(:disabled):active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+
+          .zenobia-qr-tooltip {
+            position: absolute;
+            left: 0;
+            right: 0;
+            margin-top: 8px;
+            transform: translateY(0);
+            opacity: 1;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 3;
+          }
+
+          .zenobia-qr-tooltip.expanding {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+
+          .zenobia-qr-caret {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 16px;
+            height: 16px;
+            background-color: white;
+            border-top: 1px solid #e5e7eb;
+            border-left: 1px solid #e5e7eb;
+            z-index: 4;
+          }
+
+          .zenobia-qr-content {
+            position: relative;
+            background-color: white;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 16px;
+            z-index: 3;
+          }
+
+          .zenobia-qr-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #f3f4f6;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+          }
+
+          .zenobia-qr-close:hover {
+            background-color: #e5e7eb;
+          }
+
+          .zenobia-qr-close svg {
+            width: 12px;
+            height: 12px;
+            stroke: #4b5563;
+          }
+
+          .zenobia-qr-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 140px;
+            background-color: white;
+          }
+
+          .zenobia-qr-spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #d1d5db;
+            border-top-color: black;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          }
+
+          .zenobia-qr-image {
+            width: 140px;
+            height: 140px;
+            object-fit: contain;
+            background-color: white;
+          }
+
+          .zenobia-qr-instructions {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 12px;
+            text-align: center;
+          }
+
+          .zenobia-error {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 12px;
+            text-align: center;
+          }
+
+          @keyframes spin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}
+      </style>
+
       {/* Payment Button */}
       <button
-        class={`w-full h-[120px] zenobia-payment-button rounded-lg px-6 py-3 transition-all duration-300 ${
-          animationState() !== AnimationState.INITIAL
-            ? "bg-gray-800 text-white cursor-not-allowed"
-            : props.buttonClass || "bg-black text-white hover:bg-gray-800"
-        }`}
+        class="zenobia-payment-button"
         style={{
           "background-color":
             animationState() !== AnimationState.INITIAL ? "#222222" : "black",
@@ -297,43 +457,65 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         }
       >
         <div
-          class={`absolute left-0 right-0 mt-2 transform transition-all duration-300 ${
-            animationState() === AnimationState.QR_EXPANDING
-              ? "opacity-0 translate-y-2"
-              : "opacity-100 translate-y-0"
+          class={`zenobia-qr-tooltip ${
+            animationState() === AnimationState.QR_EXPANDING ? "expanding" : ""
           }`}
         >
           {/* Caret */}
-          <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-white border-t border-l border-gray-200" />
+          <div class="zenobia-qr-caret" />
 
           {/* Content Container */}
-          <div class="relative bg-white rounded-xl border border-gray-200 shadow-lg p-4">
-            <div class="text-center">
+          <div class="zenobia-qr-content">
+            {/* Close Button */}
+            <button
+              class="zenobia-qr-close"
+              onClick={() => {
+                setAnimationState(AnimationState.INITIAL);
+                setTransferRequest(null);
+                setQrCodeDataUrl(null);
+                setTransferStatus(TransferStatus.PENDING);
+                const client = zenobiaClient();
+                if (client) {
+                  client.disconnect();
+                  setZenobiaClient(null);
+                }
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+            <div style="text-align: center;">
               <Show
                 when={qrCodeDataUrl()}
                 fallback={
-                  <div class="flex items-center justify-center w-full h-[140px]">
-                    <div class="w-6 h-6 border-2 border-gray-300 border-t-black rounded-full animate-spin" />
+                  <div class="zenobia-qr-loading">
+                    <div class="zenobia-qr-spinner" />
                   </div>
                 }
               >
-                <div class="flex justify-center">
+                <div style="display: flex; justify-content: center;">
                   <img
                     src={qrCodeDataUrl() || ""}
                     alt="Transfer QR Code"
-                    class="w-[140px] h-[140px] object-contain"
+                    class="zenobia-qr-image"
                   />
                 </div>
               </Show>
               <Show
                 when={error()}
                 fallback={
-                  <p class="text-sm text-gray-600 mb-3">
+                  <p class="zenobia-qr-instructions">
                     Point your iPhone camera to pay
                   </p>
                 }
               >
-                <div class="text-red-500 text-xs mt-3">{error()}</div>
+                <div class="zenobia-error">{error()}</div>
               </Show>
             </div>
           </div>
