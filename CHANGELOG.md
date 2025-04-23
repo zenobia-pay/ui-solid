@@ -1,4 +1,8 @@
-# Changelog
+# Changoelog
+
+## 0.0.14
+
+- Remove dependencies, better design
 
 ## 0.0.13
 
