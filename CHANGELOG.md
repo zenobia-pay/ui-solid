@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.15
+
+### Patch Changes
+
+- b7b58df: Fix for transfer statuses
+
 ## 0.0.14
 
 - Remove dependencies, better design
