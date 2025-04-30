@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.16
+
+### Patch Changes
+
+- Just a bump
+
 ## 0.0.15
 
 ### Patch Changes
