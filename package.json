@@ -9,6 +9,7 @@
   "scripts": {
     "build": "vite build",
     "test": "echo \"No tests yet\"",
+    "release": "changeset version && git add . && git commit -m \"chore: release\" && git push && git push --tags && changeset publish",
     "build:zenobia": "vite build --config vite.zenobia.config.ts"
   },
   "keywords": [

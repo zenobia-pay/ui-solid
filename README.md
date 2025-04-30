@@ -5,8 +5,9 @@ SolidJS Component for the Pay with Zenobia button.
 ## To update:
 
 `npx changeset`
-`npx changeset version`
-`npx changeset publish`
+`npm run release`
+
+release script should run `changeset version`, commit those changes and push them with the tags, and then run `changeset publish`.
 
 ## To update the zenobia-pay.js in the web: zenobiapay.com/zenobia-pay.js
 
