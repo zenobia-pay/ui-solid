@@ -129,9 +129,10 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     // Convert API status to our enum
     let currentStatus: TransferStatus;
     switch (status.status) {
+      // These mean the same thing.
       case "COMPLETED":
+      case "IN_FLIGHT":
         currentStatus = TransferStatus.COMPLETED;
-        // Call onSuccess callback with the transfer request data
         if (props.onSuccess && transferRequest()) {
           props.onSuccess(transferRequest()!);
         }
@@ -159,9 +160,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
           cancelledClient.disconnect();
           setZenobiaClient(null);
         }
-        break;
-      case "IN_FLIGHT":
-        currentStatus = TransferStatus.IN_FLIGHT;
         break;
       default:
         currentStatus = TransferStatus.PENDING;
