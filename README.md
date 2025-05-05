@@ -15,4 +15,4 @@ run `npm run build:zenobia`
 
 You'll see an output `dist/zenobia/zenobia-pay.js`
 
-Copy paste this file to the web repo deploy (yea probably not ideal)
+Copy paste this file to the web repo deploy (yea probably not the ideal deployment pipeline but screw you)
