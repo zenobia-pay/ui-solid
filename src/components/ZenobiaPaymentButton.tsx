@@ -43,7 +43,10 @@ interface ZenobiaPaymentButtonProps {
   buttonText?: string;
   buttonClass?: string;
   qrCodeSize?: number;
-  onSuccess?: (response: CreateTransferRequestResponse) => void;
+  onSuccess?: (
+    response: CreateTransferRequestResponse,
+    status: ClientTransferStatus
+  ) => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
 }
@@ -134,7 +137,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
       case "IN_FLIGHT":
         currentStatus = TransferStatus.COMPLETED;
         if (props.onSuccess && transferRequest()) {
-          props.onSuccess(transferRequest()!);
+          props.onSuccess(transferRequest()!, status);
         }
         // Disconnect the WebSocket client
         const client = zenobiaClient();
