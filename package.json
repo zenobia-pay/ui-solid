@@ -1,6 +1,6 @@
 {
   "name": "@zenobia/ui-solid",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "Solid.js UI components for Zenobia Pay",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "vite build",
     "test": "echo \"No tests yet\"",
-    "release": "changeset version && git add . && git commit -m \"chore: release\" && git push && git push --tags && changeset publish",
+    "release": "changeset version && git add . && git commit -m \"chore: release\" && git push && git push --tags && npm run build && changeset publish",
     "build:zenobia": "vite build --config vite.zenobia.config.ts"
   },
   "keywords": [
