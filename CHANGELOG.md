@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.19
+
+### Patch Changes
+
+- Pass arbitrary metadata to the merchant backend
+
 ## 0.0.18
 
 ### Patch Changes

@@ -33,7 +33,7 @@ function initZenobiaPay(opts: InitOpts) {
   render(
     () => (
       <ZenobiaPaymentButton
-        amount={opts.amount} // ⚠️ make sure your server double checks this
+        amount={opts.amount}
         url={opts.url}
         statementItems={opts.statementItems}
         buttonText={opts.buttonText}

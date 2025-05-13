@@ -8,12 +8,6 @@ import {
 import { ZenobiaClient } from "@zenobia/client";
 import QRCode from "qrcode";
 
-// Import or define the StatementItem interface to match the client
-export interface StatementItem {
-  name: string;
-  amount: number;
-}
-
 export interface CreateTransferRequestResponse {
   transferRequestId: string;
   merchantId: string;
@@ -39,7 +33,7 @@ interface ClientTransferStatus {
 interface ZenobiaPaymentButtonProps {
   amount: number;
   url: string; // Full URL to the payment endpoint
-  statementItems?: StatementItem[]; // Optional statement items
+  metadata?: Record<string, any>; // Optional metadata
   buttonText?: string;
   buttonClass?: string;
   qrCodeSize?: number;
@@ -94,7 +88,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     const request = transferRequest();
     if (request?.transferRequestId && request?.merchantId) {
       const transferIdNoDashes = request.transferRequestId.replace(/-/g, "");
-      // Convert to base64URL format (no padding)
       const base64TransferId = btoa(transferIdNoDashes)
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
@@ -119,7 +112,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             setError("Failed to generate QR code");
           });
       } else {
-        // On iOS, open the App Clip directly
+        // On iOS, open the App Clip / App directly
         window.location.href = qrString;
       }
     }
@@ -132,14 +125,12 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     // Convert API status to our enum
     let currentStatus: TransferStatus;
     switch (status.status) {
-      // These mean the same thing.
       case "COMPLETED":
       case "IN_FLIGHT":
         currentStatus = TransferStatus.COMPLETED;
         if (props.onSuccess && transferRequest()) {
           props.onSuccess(transferRequest()!, status);
         }
-        // Disconnect the WebSocket client
         const client = zenobiaClient();
         if (client) {
           client.disconnect();
@@ -148,7 +139,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         break;
       case "FAILED":
         currentStatus = TransferStatus.FAILED;
-        // Disconnect the WebSocket client
         const failedClient = zenobiaClient();
         if (failedClient) {
           failedClient.disconnect();
@@ -157,7 +147,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         break;
       case "CANCELLED":
         currentStatus = TransferStatus.CANCELLED;
-        // Disconnect the WebSocket client
         const cancelledClient = zenobiaClient();
         if (cancelledClient) {
           cancelledClient.disconnect();
@@ -170,7 +159,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
 
     setTransferStatus(currentStatus);
 
-    // Call the onStatusChange callback if provided
     if (props.onStatusChange) {
       props.onStatusChange(currentStatus);
     }
@@ -219,29 +207,25 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
       setLoading(true);
       setAnimationState(AnimationState.BUTTON_CLOSING);
 
-      // Initialize client
       const client = new ZenobiaClient();
       setZenobiaClient(client);
 
-      // Create default statement item if none provided
-      const statementItems = props.statementItems || [
-        {
+      const metadata = props.metadata || {
+        amount: props.amount,
+        statementItems: {
           name: "Payment",
           amount: props.amount,
         },
-      ];
+      };
 
-      // Call createTransferAndListen with the full URL and callbacks
       const transfer = await client.createTransferAndListen(
         props.url,
-        props.amount,
-        statementItems,
+        metadata,
         handleStatusUpdate,
         handleWebSocketError,
         handleConnectionChange
       );
 
-      // Store transfer request data
       setTransferRequest({
         transferRequestId: transfer.transferRequestId,
         merchantId: transfer.merchantId,
@@ -449,7 +433,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
           : props.buttonText || `Pay ${props.amount}`}
       </button>
 
-      {/* QR Code Tooltip - Only show if not on iOS */}
       <Show
         when={
           !isIOS() &&
@@ -462,12 +445,9 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             animationState() === AnimationState.QR_EXPANDING ? "expanding" : ""
           }`}
         >
-          {/* Caret */}
           <div class="zenobia-qr-caret" />
 
-          {/* Content Container */}
           <div class="zenobia-qr-content">
-            {/* Close Button */}
             <button
               class="zenobia-qr-close"
               onClick={() => {
