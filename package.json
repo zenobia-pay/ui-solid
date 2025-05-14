@@ -26,7 +26,7 @@
   "author": "Zenobia Pay",
   "license": "MIT",
   "dependencies": {
-    "@zenobia/client": "^0.0.13",
+    "@zenobia/client": "^0.0.14",
     "solid-js": "^1.7.0"
   },
   "peerDependencies": {

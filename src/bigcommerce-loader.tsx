@@ -209,13 +209,10 @@ async function initZenobiaPayBigcommerce(opts: InitOpts) {
           buttonText={opts.buttonText}
           buttonClass={opts.buttonClass}
           qrCodeSize={opts.qrCodeSize}
-          onSuccess={(res) => {
-            // Handle success and redirect
-            if (opts.onSuccess) {
-              opts.onSuccess(res);
-            }
-            window.location.href =
-              "https://pendertif-stimmen.mybigcommerce.com/checkout/order-confirmation";
+          onSuccess={(transferRequest, status) => {
+            const signature = transferRequest.signature;
+            const transferRequestId = transferRequest.transferRequestId;
+            window.location.href = `https://${window.location.hostname}.dashboard.zenobiapay.com/checkout/order-confirmation?signature=${signature}&transferRequestId=${transferRequestId}`;
           }}
           onError={opts.onError}
           onStatusChange={opts.onStatusChange}
