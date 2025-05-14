@@ -1,16 +1,15 @@
 import { render } from "solid-js/web";
 import { ZenobiaPaymentButton } from "./components/ZenobiaPaymentButton";
 import type {
-  StatementItem,
   CreateTransferRequestResponse,
   TransferStatus,
 } from "./components/ZenobiaPaymentButton";
 
 type InitOpts = {
-  target: string | HTMLElement;
   amount: number;
+  target: string | HTMLElement;
+  metadata: Record<string, any>;
   url: string;
-  statementItems?: StatementItem[];
   buttonText?: string;
   buttonClass?: string;
   qrCodeSize?: number;
@@ -33,9 +32,9 @@ function initZenobiaPay(opts: InitOpts) {
   render(
     () => (
       <ZenobiaPaymentButton
-        amount={opts.amount}
         url={opts.url}
-        statementItems={opts.statementItems}
+        amount={opts.amount}
+        metadata={opts.metadata}
         buttonText={opts.buttonText}
         buttonClass={opts.buttonClass}
         qrCodeSize={opts.qrCodeSize}

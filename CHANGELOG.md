@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.20
+
+### Patch Changes
+
+- Add helper functions in client
+
 ## 0.0.19
 
 ### Patch Changes
