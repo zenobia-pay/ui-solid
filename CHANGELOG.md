@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.21
+
+### Patch Changes
+
+- Add discount argument, changed to modal flow
+
 ## 0.0.20
 
 ### Patch Changes
