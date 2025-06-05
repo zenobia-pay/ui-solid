@@ -24,6 +24,13 @@ export enum TransferStatus {
   CANCELLED = "CANCELLED",
 }
 
+// Define an enum for QR code position
+export enum QrPosition {
+  ABOVE = "ABOVE",
+  BELOW = "BELOW",
+  POPUP = "POPUP",
+}
+
 // Define interface for client TransferStatus
 interface ClientTransferStatus {
   status: string;
@@ -43,6 +50,7 @@ interface ZenobiaPaymentButtonProps {
   ) => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
+  qrPosition?: QrPosition;
 }
 
 // Define animation states
@@ -310,21 +318,33 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             position: absolute;
             left: 0;
             right: 0;
-            margin-top: 8px;
+            /* margin-top: 8px; */ /* Removed for dynamic positioning */
             transform: translateY(0);
             opacity: 1;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 3;
           }
 
+          .zenobia-qr-tooltip.below {
+            margin-top: 8px;
+          }
+          .zenobia-qr-tooltip.above {
+            bottom: 100%;
+            margin-bottom: 8px;
+          }
+
           .zenobia-qr-tooltip.expanding {
             opacity: 0;
             transform: translateY(8px);
           }
+          .zenobia-qr-tooltip.above.expanding {
+            transform: translateY(-8px);
+          }
+
 
           .zenobia-qr-caret {
             position: absolute;
-            top: -8px;
+            /* top: -8px; */ /* Removed for dynamic positioning */
             left: 50%;
             transform: translateX(-50%) rotate(45deg);
             width: 16px;
@@ -335,6 +355,23 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             z-index: 4;
           }
 
+          .zenobia-qr-tooltip.below .zenobia-qr-caret {
+            top: -8px;
+            border-top: 1px solid #e5e7eb;
+            border-left: 1px solid #e5e7eb;
+            border-bottom: none;
+            border-right: none;
+          }
+
+          .zenobia-qr-tooltip.above .zenobia-qr-caret {
+            bottom: -8px;
+            border-bottom: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+            border-top: none;
+            border-left: none;
+          }
+
+
           .zenobia-qr-content {
             position: relative;
             background-color: white;
@@ -344,6 +381,35 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             padding: 16px;
             z-index: 3;
           }
+
+          /* Styles for Popup */
+          .zenobia-qr-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+          }
+          .zenobia-qr-popup-overlay.visible {
+            opacity: 1;
+          }
+          .zenobia-qr-popup-content {
+            background-color: white;
+            border-radius: 16px;
+            padding: 24px; /* Increased padding for popup */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            position: relative; /* For close button positioning */
+            width: auto; /* Auto width based on content */
+            max-width: 90%; /* Max width to prevent overflow */
+          }
+
 
           .zenobia-qr-close {
             position: absolute;
@@ -429,10 +495,11 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         disabled={loading() || animationState() !== AnimationState.INITIAL}
       >
         {loading()
-          ? "Processing..."
-          : props.buttonText || `Pay ${props.amount}`}
+          ? "Loading..."
+          : props.buttonText + "hey" || `Pay ${props.amount}`}
       </button>
 
+      {/* QR Code Tooltip/Popup Logic */}
       <Show
         when={
           !isIOS() &&
@@ -440,67 +507,146 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             animationState() === AnimationState.QR_VISIBLE)
         }
       >
-        <div
-          class={`zenobia-qr-tooltip ${
-            animationState() === AnimationState.QR_EXPANDING ? "expanding" : ""
-          }`}
-        >
-          <div class="zenobia-qr-caret" />
-
-          <div class="zenobia-qr-content">
-            <button
-              class="zenobia-qr-close"
-              onClick={() => {
-                setAnimationState(AnimationState.INITIAL);
-                setTransferRequest(null);
-                setQrCodeDataUrl(null);
-                setTransferStatus(TransferStatus.PENDING);
-                const client = zenobiaClient();
-                if (client) {
-                  client.disconnect();
-                  setZenobiaClient(null);
-                }
-              }}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
+        {(props.qrPosition || QrPosition.BELOW) !== QrPosition.POPUP ? (
+          // Tooltip for ABOVE and BELOW
+          <div
+            class={`zenobia-qr-tooltip ${
+              animationState() === AnimationState.QR_EXPANDING
+                ? "expanding"
+                : ""
+            } ${
+              (props.qrPosition || QrPosition.BELOW) === QrPosition.ABOVE
+                ? "above"
+                : "below"
+            }`}
+          >
+            <div class="zenobia-qr-caret" />
+            <div class="zenobia-qr-content">
+              {/* Common QR Content */}
+              <button
+                class="zenobia-qr-close"
+                onClick={() => {
+                  setAnimationState(AnimationState.INITIAL);
+                  setTransferRequest(null);
+                  setQrCodeDataUrl(null);
+                  setTransferStatus(TransferStatus.PENDING);
+                  const client = zenobiaClient();
+                  if (client) {
+                    client.disconnect();
+                    setZenobiaClient(null);
+                  }
+                }}
               >
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-            <div style="text-align: center;">
-              <Show
-                when={qrCodeDataUrl()}
-                fallback={
-                  <div class="zenobia-qr-loading">
-                    <div class="zenobia-qr-spinner" />
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+              <div style="text-align: center;">
+                <Show
+                  when={qrCodeDataUrl()}
+                  fallback={
+                    <div class="zenobia-qr-loading">
+                      <div class="zenobia-qr-spinner" />
+                    </div>
+                  }
+                >
+                  <div style="display: flex; justify-content: center;">
+                    <img
+                      src={qrCodeDataUrl() || ""}
+                      alt="Transfer QR Code"
+                      class="zenobia-qr-image"
+                    />
                   </div>
-                }
-              >
-                <div style="display: flex; justify-content: center;">
-                  <img
-                    src={qrCodeDataUrl() || ""}
-                    alt="Transfer QR Code"
-                    class="zenobia-qr-image"
-                  />
-                </div>
-              </Show>
-              <Show
-                when={error()}
-                fallback={
-                  <p class="zenobia-qr-instructions">
-                    Point your iPhone camera to pay
-                  </p>
-                }
-              >
-                <div class="zenobia-error">{error()}</div>
-              </Show>
+                </Show>
+                <Show
+                  when={error()}
+                  fallback={
+                    <p class="zenobia-qr-instructions">
+                      Point your iPhone camera to pay
+                    </p>
+                  }
+                >
+                  <div class="zenobia-error">{error()}</div>
+                </Show>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          // Popup
+          <div
+            class={`zenobia-qr-popup-overlay ${
+              animationState() === AnimationState.QR_VISIBLE ? "visible" : ""
+            }`}
+          >
+            <div class="zenobia-qr-popup-content">
+              {/* Common QR Content (Copied here, consider refactoring to a sub-component later if complex) */}
+              <button
+                class="zenobia-qr-close"
+                onClick={() => {
+                  setAnimationState(AnimationState.INITIAL);
+                  setTransferRequest(null);
+                  setQrCodeDataUrl(null);
+                  setTransferStatus(TransferStatus.PENDING);
+                  const client = zenobiaClient();
+                  if (client) {
+                    client.disconnect();
+                    setZenobiaClient(null);
+                  }
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+              <div style="text-align: center;">
+                <Show
+                  when={qrCodeDataUrl()}
+                  fallback={
+                    <div class="zenobia-qr-loading">
+                      <div class="zenobia-qr-spinner" />
+                    </div>
+                  }
+                >
+                  <div style="display: flex; justify-content: center;">
+                    <img
+                      src={qrCodeDataUrl() || ""}
+                      alt="Transfer QR Code"
+                      class="zenobia-qr-image"
+                      style={{
+                        width: props.qrCodeSize
+                          ? `${props.qrCodeSize}px`
+                          : "200px",
+                        height: props.qrCodeSize
+                          ? `${props.qrCodeSize}px`
+                          : "200px",
+                      }}
+                    />
+                  </div>
+                </Show>
+                <Show
+                  when={error()}
+                  fallback={
+                    <p class="zenobia-qr-instructions">
+                      Point your iPhone camera to pay
+                    </p>
+                  }
+                >
+                  <div class="zenobia-error">{error()}</div>
+                </Show>
+              </div>
+            </div>
+          </div>
+        )}
       </Show>
     </div>
   );

@@ -1,5 +1,8 @@
 import { render } from "solid-js/web";
-import { ZenobiaPaymentButton } from "./components/ZenobiaPaymentButton";
+import {
+  QrPosition,
+  ZenobiaPaymentButton,
+} from "./components/ZenobiaPaymentButton";
 import type {
   CreateTransferRequestResponse,
   TransferStatus,
@@ -92,7 +95,7 @@ async function initZenobiaPayBigcommerce(opts: InitOpts) {
             <label for="radio-zenobiapay" class="form-label optimizedCheckout-form-label">
               <div class="paymentProviderHeader-container">
                 <div class="paymentProviderHeader-nameContainer" data-test="payment-method-zenobiapay">
-                  <div aria-level="6" class="paymentProviderHeader-name" data-test="payment-method-name" role="heading">Pay by bank with Zenobia Pay</div>
+                  <div aria-level="6" class="paymentProviderHeader-name" data-test="payment-method-name" role="heading">Pay with your phone with Zenobia Pay</div>
                 </div>
               </div>
             </label>
@@ -145,16 +148,16 @@ async function initZenobiaPayBigcommerce(opts: InitOpts) {
                     buttonText={opts.buttonText}
                     buttonClass={opts.buttonClass}
                     qrCodeSize={opts.qrCodeSize}
-                    onSuccess={(res) => {
+                    onSuccess={(transferRequest, status) => {
                       // Handle success and redirect
-                      if (opts.onSuccess) {
-                        opts.onSuccess(res);
-                      }
-                      window.location.href =
-                        "https://pendertif-stimmen.mybigcommerce.com/checkout/order-confirmation";
+                      const signature = transferRequest.signature;
+                      const transferRequestId =
+                        transferRequest.transferRequestId;
+                      window.location.href = `https://order-confirmation-9bg.pages.dev/checkout/order-confirmation?signature=${signature}&transferRequestId=${transferRequestId}&returnUrl=${window.location.hostname}`;
                     }}
                     onError={opts.onError}
                     onStatusChange={opts.onStatusChange}
+                    qrPosition={QrPosition.POPUP}
                   />
                 ),
                 buttonContainer
@@ -179,47 +182,16 @@ async function initZenobiaPayBigcommerce(opts: InitOpts) {
       });
     }
 
-    // Add checkout data to metadata
-    const enhancedMetadata = {
-      ...opts.metadata,
-      checkoutId: checkout?.id,
-      customerEmail: checkout?.billingAddress?.email,
-    };
-
-    // Create container for our button (keeping this for backward compatibility)
-    const buttonContainer = document.createElement("div");
-    buttonContainer.className = "zenobia-pay-button-container";
-
-    // Find the form-actions div and insert our button before the Place Order button
+    // Initially hide the Zenobia Pay button container
     const formActions = document.querySelector(".form-actions");
-    if (!formActions) {
-      console.error("[zenobia-pay] Could not find form-actions element");
-      return;
+    if (formActions) {
+      const zenobiaPayContainer = formActions.querySelector(
+        ".zenobia-pay-button-container"
+      );
+      if (zenobiaPayContainer) {
+        (zenobiaPayContainer as HTMLElement).style.display = "none";
+      }
     }
-
-    // Insert our button container before the Place Order button
-    formActions.insertBefore(buttonContainer, formActions.firstChild);
-
-    render(
-      () => (
-        <ZenobiaPaymentButton
-          url={opts.url}
-          amount={opts.amount}
-          metadata={enhancedMetadata}
-          buttonText={opts.buttonText}
-          buttonClass={opts.buttonClass}
-          qrCodeSize={opts.qrCodeSize}
-          onSuccess={(transferRequest, status) => {
-            const signature = transferRequest.signature;
-            const transferRequestId = transferRequest.transferRequestId;
-            window.location.href = `https://${window.location.hostname}.dashboard.zenobiapay.com/checkout/order-confirmation?signature=${signature}&transferRequestId=${transferRequestId}`;
-          }}
-          onError={opts.onError}
-          onStatusChange={opts.onStatusChange}
-        />
-      ),
-      buttonContainer
-    );
   } catch (error) {
     console.error("[zenobia-pay] Error initializing payment:", error);
     opts.onError?.(error as Error);
@@ -234,7 +206,7 @@ async function initZenobiaPayBigcommerce(opts: InitOpts) {
     target: ".zenobia-pay-button-container",
     metadata: {},
     url: "https://dashboard.zenobiapay.com/bigcommerce/create-transfer",
-    buttonText: "Pay with Zenobia",
+    buttonText: "Zenobia Pay",
     buttonClass: "button button--primary button--large button--slab",
   };
 
