@@ -6,7 +6,7 @@ import {
   Show,
 } from "solid-js";
 import { ZenobiaClient } from "@zenobia/client";
-import QRCode from "qrcode";
+import QRCodeStyling from "qr-code-styling";
 
 export interface CreateTransferRequestResponse {
   transferRequestId: string;
@@ -80,9 +80,11 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   const [animationState, setAnimationState] = createSignal<AnimationState>(
     AnimationState.INITIAL
   );
+  const [isClosing, setIsClosing] = createSignal<boolean>(false);
   const [transferRequest, setTransferRequest] =
     createSignal<CreateTransferRequestResponse | null>(null);
-  const [qrCodeDataUrl, setQrCodeDataUrl] = createSignal<string | null>(null);
+  const [qrCodeObject, setQrCodeObject] = createSignal<QRCodeStyling | null>(null);
+  const qrContainerRef = { current: null as HTMLDivElement | null };
   const [transferStatus, setTransferStatus] = createSignal<TransferStatus>(
     TransferStatus.PENDING
   );
@@ -108,18 +110,41 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
 
       // Only generate QR code if not on iOS
       if (!isIOS()) {
-        QRCode.toDataURL(qrString, {
-          errorCorrectionLevel: "M",
-          margin: 1,
-          width: props.qrCodeSize || 200,
-        })
-          .then((url) => {
-            setQrCodeDataUrl(url);
-          })
-          .catch((err) => {
-            console.error("Error generating QR code:", err);
-            setError("Failed to generate QR code");
-          });
+        // Use a slightly smaller size for the QR code to match the placeholder
+        const containerSize = props.qrCodeSize || 200;
+        const qrSize = containerSize - 20; // Match the placeholder size reduction
+        const qrCode = new QRCodeStyling({
+          width: qrSize,
+          height: qrSize,
+          type: "svg",
+          data: qrString,
+          image: undefined,
+          dotsOptions: {
+            color: "#000000",
+            type: "dots"
+          },
+          backgroundOptions: {
+            color: "#ffffff",
+          },
+          cornersSquareOptions: {
+            type: "extra-rounded"
+          },
+          cornersDotOptions: {
+            type: "dot"
+          },
+          qrOptions: {
+            errorCorrectionLevel: "M"
+          },
+        });
+        
+        setQrCodeObject(qrCode);
+        
+        // If the container ref is already available, append the QR code
+        if (qrContainerRef.current) {
+          // Clear any existing content
+          qrContainerRef.current.innerHTML = '';
+          qrCode.append(qrContainerRef.current);
+        }
       } else {
         // On iOS, open the App Clip / App directly
         window.location.href = qrString;
@@ -222,9 +247,22 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     const discount = discountAmount();
     if (discount < 1000) { // Less than $10 (in cents)
       const percentage = ((discount / props.amount) * 100).toFixed(0);
-      return `✨ ${percentage}% cashback applied! ✨`;
+      return `✨ ${percentage}% cashback applied!`;
     } else {
       return `✨ Applied $${(discount / 100).toFixed(2)} cashback!`;
+    }
+  };
+  
+  // Get savings text for button
+  const getSavingsText = () => {
+    const discount = discountAmount();
+    if (discount == 0) {
+      return props.buttonText;
+    } else if (discount < 1000) { // Less than $10 (in cents)
+      const percentage = ((discount / props.amount) * 100).toFixed(0);
+      return `Get ${percentage}% cashback`;
+    } else {
+      return `Get $${(discount / 100).toFixed(2)} cashback`;
     }
   };
 
@@ -330,10 +368,42 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
           }
 
-          .zenobia-payment-button:disabled {
+          .zenobia-payment-button {
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+          }
+
+          .zenobia-payment-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, coral, orange);
+            z-index: -1;
+            transition: left 0.3s ease;
+          }
+
+          .zenobia-payment-button:not(.modal-open)::before {
+            left: -100%;
+          }
+
+          .zenobia-payment-button.modal-open::before {
+            left: 0;
+          }
+
+          .zenobia-payment-button:disabled:not(.modal-open) {
             cursor: not-allowed;
             background-color: #e5e7eb;
             color: #9ca3af;
+            box-shadow: none;
+            transform: none;
+          }
+
+          .zenobia-payment-button:disabled.modal-open {
+            cursor: not-allowed;
+            color: white;
             box-shadow: none;
             transform: none;
           }
@@ -342,9 +412,63 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             background-color: black;
             color: white;
           }
+          
+          .zenobia-payment-button:not(:disabled):hover:not(.modal-open)::before {
+            left: 0;
+          }
+          
+          /* Button text animation styles */
+          .button-text-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+          }
+          
+          .initial-text,
+          .hover-text {
+            position: absolute;
+            width: 100%;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            white-space: nowrap;
+          }
+          
+          .initial-text {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          
+          .hover-text {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          
+          /* Hover animation - left to right */
+          .zenobia-payment-button:not(:disabled):hover .initial-text {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          
+          .zenobia-payment-button:not(:disabled):hover .hover-text {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          
+          /* Modal closing animation - right to left */
+          .zenobia-payment-button.closing .initial-text {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          
+          .zenobia-payment-button.closing .hover-text {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
 
           .zenobia-payment-button:not(:disabled):hover {
-            background-color: #222222;
             transform: translateY(-2px);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           }
@@ -446,7 +570,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             opacity: 1;
           }
           .zenobia-qr-popup-content {
-            background-color: white;
+            background-color: #ffffff; /* Pure white background */
             border-radius: 16px;
             padding: 24px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
@@ -638,14 +762,28 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
       {/* Payment Button */}
       <button
         class="zenobia-payment-button"
+        classList={{
+          "modal-open": animationState() !== AnimationState.INITIAL,
+          "closing": isClosing()
+        }}
         style={{
-          "background-color":
-            animationState() !== AnimationState.INITIAL ? "#222222" : "black",
+          "background-color": "black"
         }}
         onClick={handleClick}
         disabled={animationState() !== AnimationState.INITIAL}
       >
-        {props.buttonText || `Pay ${props.amount}`}
+        {animationState() !== AnimationState.INITIAL && !isClosing() ? (
+          props.buttonText || `Pay ${(props.amount / 100).toFixed(2)}`
+        ) : (
+          <div class="button-text-container">
+            <div class="initial-text">
+              {getSavingsText()}
+            </div>
+            <div class="hover-text">
+              {props.buttonText || "Pay with Zenobia"}
+            </div>
+          </div>
+        )}
       </button>
 
       {/* QR Code Tooltip/Popup Logic */}
@@ -661,33 +799,34 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
           classList={{
             visible: animationState() === AnimationState.QR_VISIBLE,
           }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setAnimationState(AnimationState.INITIAL);
-              setTransferRequest(null);
-              setQrCodeDataUrl(null);
-              setTransferStatus(TransferStatus.PENDING);
-              const client = zenobiaClient();
-              if (client) {
-                client.disconnect();
-                setZenobiaClient(null);
-              }
-            }
-          }}
         >
           <div class="zenobia-qr-popup-content">
             <button
               class="zenobia-qr-close"
               onClick={() => {
+                // Set closing state to trigger text animation
+                setIsClosing(true);
+                
+                // Hide the modal immediately
                 setAnimationState(AnimationState.INITIAL);
-                setTransferRequest(null);
-                setQrCodeDataUrl(null);
-                setTransferStatus(TransferStatus.PENDING);
-                const client = zenobiaClient();
-                if (client) {
-                  client.disconnect();
-                  setZenobiaClient(null);
-                }
+                
+                // Wait for animation to complete before resetting state
+                setTimeout(() => {
+                  setTransferRequest(null);
+                  setQrCodeObject(null);
+                  setTransferStatus(TransferStatus.PENDING);
+                  
+                  const client = zenobiaClient();
+                  if (client) {
+                    client.disconnect();
+                    setZenobiaClient(null);
+                  }
+                  
+                  // Reset closing state after animation completes
+                  setTimeout(() => {
+                    setIsClosing(false);
+                  }, 300); // Match the CSS transition duration
+                }, 50);
               }}
             >
               <svg
@@ -707,33 +846,52 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
             </div>
             <div class="modal-body">
               <Show
-                when={qrCodeDataUrl() && transferRequest()}
+                when={qrCodeObject() && transferRequest()}
                 fallback={
-                  <div class="qr-code-container">
+                  <div 
+                    class="qr-code-container"
+                    style={{
+                      width: props.qrCodeSize ? `${props.qrCodeSize}px` : "200px",
+                      height: props.qrCodeSize ? `${props.qrCodeSize}px` : "200px",
+                      "display": "flex",
+                      "justify-content": "center",
+                      "align-items": "center"
+                    }}
+                  >
                     <div 
                       class="zenobia-qr-placeholder"
                       style={{
-                        width: props.qrCodeSize ? `${props.qrCodeSize}px` : "200px",
-                        height: props.qrCodeSize ? `${props.qrCodeSize}px` : "200px"
+                        width: props.qrCodeSize ? `${props.qrCodeSize - 20}px` : "180px",
+                        height: props.qrCodeSize ? `${props.qrCodeSize - 20}px` : "180px"
                       }}
                     />
                   </div>
                 }
               >
-                <div class="qr-code-container">
-                  <img
-                    src={qrCodeDataUrl() || ""}
-                    alt="Transfer QR Code"
-                    class="zenobia-qr-image"
-                    style={{
-                      width: props.qrCodeSize
-                        ? `${props.qrCodeSize}px`
-                        : "200px",
-                      height: props.qrCodeSize
-                        ? `${props.qrCodeSize}px`
-                        : "200px",
-                    }}
-                  />
+                <div 
+                  class="qr-code-container" 
+                  id="qrcode-container" 
+                  ref={(el) => {
+                    qrContainerRef.current = el;
+                    const qrCode = qrCodeObject();
+                    if (qrCode && el) {
+                      // Clear any existing content
+                      el.innerHTML = '';
+                      qrCode.append(el);
+                    }
+                  }}
+                  style={{
+                    width: props.qrCodeSize
+                      ? `${props.qrCodeSize}px`
+                      : "200px",
+                    height: props.qrCodeSize
+                      ? `${props.qrCodeSize}px`
+                      : "200px",
+                    "display": "flex",
+                    "justify-content": "center",
+                    "align-items": "center"
+                  }}
+                >
                 </div>
               </Show>
               <div class="payment-amount">

@@ -27,6 +27,7 @@
   "license": "MIT",
   "dependencies": {
     "@zenobia/client": "^0.0.14",
+    "qr-code-styling": "^1.9.2",
     "solid-js": "^1.7.0"
   },
   "peerDependencies": {
