@@ -1,6 +1,6 @@
 {
   "name": "@zenobia/ui-solid",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "Solid.js UI components for Zenobia Pay",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -11,7 +11,8 @@
     "test": "echo \"No tests yet\"",
     "release": "changeset version && git add . && git commit -m \"chore: release\" && git push && git push --tags && npm run build && changeset publish",
     "build:zenobia": "vite build --config vite.zenobia.config.ts",
-    "build:zenobia-bigcommerce": "vite build --config vite.zenobia-bigcommerce.config.ts"
+    "build:zenobia-bigcommerce": "vite build --config vite.zenobia-bigcommerce.config.ts",
+    "build:modal": "vite build --config vite.zenobia-modal.config.ts"
   },
   "keywords": [
     "zenobia",

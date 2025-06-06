@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.23
+
+### Patch Changes
+
+- Separate components and make modal larger
+
 ## 0.0.22
 
 ### Patch Changes
