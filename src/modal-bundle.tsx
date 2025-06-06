@@ -1,5 +1,6 @@
 import { render } from "solid-js/web";
 import { ZenobiaPaymentModal } from "./components/ZenobiaPaymentModal";
+import { zenobiaPaymentStyles } from "./components/ZenobiaPaymentStyles";
 import type { TransferStatus } from "./components/ZenobiaPaymentButton";
 
 interface InitModalOpts {
@@ -15,6 +16,15 @@ interface InitModalOpts {
   target: string | HTMLElement;
 }
 
+function injectZenobiaStyles() {
+  if (!document.getElementById("zenobia-payment-styles")) {
+    const style = document.createElement("style");
+    style.id = "zenobia-payment-styles";
+    style.textContent = zenobiaPaymentStyles;
+    document.head.appendChild(style);
+  }
+}
+
 function initZenobiaPayModal(opts: InitModalOpts) {
   const targetEl =
     typeof opts.target === "string"
@@ -25,6 +35,8 @@ function initZenobiaPayModal(opts: InitModalOpts) {
     console.error("[zenobia-pay-modal] target element not found:", opts.target);
     return;
   }
+
+  injectZenobiaStyles();
 
   render(
     () => (

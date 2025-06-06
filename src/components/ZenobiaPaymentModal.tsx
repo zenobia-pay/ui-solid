@@ -21,6 +21,7 @@ interface ZenobiaPaymentModalProps {
   amount: number;
   discountAmount?: number;
   qrCodeSize?: number;
+  url: string; // Full URL to the payment endpoint
   onSuccess?: (status: ClientTransferStatus) => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
@@ -41,6 +42,23 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
   const [zenobiaClient, setZenobiaClient] = createSignal<ZenobiaClient | null>(
     null
   );
+
+  // Initialize WebSocket connection when transfer request ID is available
+  createEffect(() => {
+    if (props.transferRequestId && !zenobiaClient()) {
+      const client = new ZenobiaClient();
+      setZenobiaClient(client);
+
+      // Re-establish WebSocket connection for the existing transfer
+      client.createTransferAndListen(
+        props.url,
+        { transferRequestId: props.transferRequestId },
+        handleStatusUpdate,
+        handleWebSocketError,
+        handleConnectionChange
+      );
+    }
+  });
 
   // Generate QR code when transfer request is created
   createEffect(() => {

@@ -84,83 +84,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   const [isClosing, setIsClosing] = createSignal<boolean>(false);
   const [transferRequest, setTransferRequest] =
     createSignal<CreateTransferRequestResponse | null>(null);
-  const [transferStatus, setTransferStatus] = createSignal<TransferStatus>(
-    TransferStatus.PENDING
-  );
   const [error, setError] = createSignal<string | null>(null);
-  const [isConnected, setIsConnected] = createSignal(false);
-  const [zenobiaClient, setZenobiaClient] = createSignal<ZenobiaClient | null>(
-    null
-  );
-
-  // Handle WebSocket status update
-  const handleStatusUpdate = (status: ClientTransferStatus) => {
-    console.log("Received status update:", status);
-
-    // Convert API status to our enum
-    let currentStatus: TransferStatus;
-    switch (status.status) {
-      case "COMPLETED":
-      case "IN_FLIGHT":
-        currentStatus = TransferStatus.COMPLETED;
-        if (props.onSuccess && transferRequest()) {
-          props.onSuccess(transferRequest()!, status);
-        }
-        const client = zenobiaClient();
-        if (client) {
-          client.disconnect();
-          setZenobiaClient(null);
-        }
-        break;
-      case "FAILED":
-        currentStatus = TransferStatus.FAILED;
-        const failedClient = zenobiaClient();
-        if (failedClient) {
-          failedClient.disconnect();
-          setZenobiaClient(null);
-        }
-        break;
-      case "CANCELLED":
-        currentStatus = TransferStatus.CANCELLED;
-        const cancelledClient = zenobiaClient();
-        if (cancelledClient) {
-          cancelledClient.disconnect();
-          setZenobiaClient(null);
-        }
-        break;
-      default:
-        currentStatus = TransferStatus.PENDING;
-    }
-
-    setTransferStatus(currentStatus);
-
-    if (props.onStatusChange) {
-      props.onStatusChange(currentStatus);
-    }
-  };
-
-  // Handle WebSocket error
-  const handleWebSocketError = (errorMsg: string) => {
-    console.error("WebSocket error:", errorMsg);
-    setError(errorMsg);
-  };
-
-  // Handle WebSocket connection status change
-  const handleConnectionChange = (connected: boolean) => {
-    console.log(
-      "WebSocket connection status:",
-      connected ? "Connected" : "Disconnected"
-    );
-    setIsConnected(connected);
-  };
-
-  // Cleanup on component unmount
-  onCleanup(() => {
-    const client = zenobiaClient();
-    if (client) {
-      client.disconnect();
-    }
-  });
 
   // Get savings text for button
   const getSavingsText = () => {
@@ -190,10 +114,8 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         setAnimationState(AnimationState.QR_VISIBLE);
       }, 300);
 
-      // Create a new transfer request in parallel
+      // Create a new transfer request
       const client = new ZenobiaClient();
-      setZenobiaClient(client);
-
       const metadata = props.metadata || {
         amount: props.amount,
         statementItems: {
@@ -204,10 +126,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
 
       const transfer = await client.createTransferAndListen(
         props.url,
-        metadata,
-        handleStatusUpdate,
-        handleWebSocketError,
-        handleConnectionChange
+        metadata
       );
 
       setTransferRequest({
@@ -239,13 +158,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     // Wait for animation to complete before resetting state
     setTimeout(() => {
       setTransferRequest(null);
-      setTransferStatus(TransferStatus.PENDING);
-
-      const client = zenobiaClient();
-      if (client) {
-        client.disconnect();
-        setZenobiaClient(null);
-      }
 
       // Reset closing state after animation completes
       setTimeout(() => {
@@ -298,6 +210,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
           amount={props.amount}
           discountAmount={props.discountAmount}
           qrCodeSize={props.qrCodeSize}
+          url={props.url}
           onSuccess={(status) => {
             if (props.onSuccess && transferRequest()) {
               props.onSuccess(transferRequest()!, status);
