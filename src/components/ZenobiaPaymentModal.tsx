@@ -18,6 +18,7 @@ interface ZenobiaPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   transferRequestId?: string;
+  signature?: string;
   amount: number;
   discountAmount?: number;
   qrCodeSize?: number;
@@ -49,10 +50,10 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
       const client = new ZenobiaClient();
       setZenobiaClient(client);
 
-      // Re-establish WebSocket connection for the existing transfer
-      client.createTransferAndListen(
-        props.url,
-        { transferRequestId: props.transferRequestId },
+      // Listen to the existing transfer
+      client.listenToTransfer(
+        props.transferRequestId,
+        props.signature || "",
         handleStatusUpdate,
         handleWebSocketError,
         handleConnectionChange

@@ -124,10 +124,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         },
       };
 
-      const transfer = await client.createTransferAndListen(
-        props.url,
-        metadata
-      );
+      const transfer = await client.createTransfer(props.url, metadata);
 
       setTransferRequest({
         transferRequestId: transfer.transferRequestId,
@@ -207,6 +204,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
           isOpen={animationState() === AnimationState.QR_VISIBLE}
           onClose={handleClose}
           transferRequestId={transferRequest()?.transferRequestId}
+          signature={transferRequest()?.signature}
           amount={props.amount}
           discountAmount={props.discountAmount}
           qrCodeSize={props.qrCodeSize}
