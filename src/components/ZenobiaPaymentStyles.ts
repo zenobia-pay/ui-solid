@@ -385,28 +385,28 @@ export const zenobiaPaymentStyles = `
     overflow: hidden;
   }
 
-  .zenobia-qr-placeholder::after {
+  .zenobia-qr-placeholder::before {
     content: "";
     position: absolute;
-    top: 0;
-    left: -100%;
+    top: -50%;
+    left: -50%;
     width: 200%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.4) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
-    animation: shimmer 1.5s infinite ease-in-out;
+    height: 200%;
+    background: linear-gradient(135deg,
+      rgba(255,255,255,0) 0%,
+      rgba(255,255,255,0) 35%,
+      rgba(255,255,255,0.5) 50%,
+      rgba(255,255,255,0) 65%,
+      rgba(255,255,255,0) 100%);
+    animation: shimmer 1.5s infinite ease-out;
   }
 
   @keyframes shimmer {
     0% {
-      transform: translateX(-100%);
+      transform: translateX(-100%) translateY(-100%);
     }
     100% {
-      transform: translateX(100%);
+      transform: translateX(100%) translateY(100%);
     }
   }
   .zenobia-qr-image {
