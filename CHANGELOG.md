@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.28
+
+### Patch Changes
+
+- Consolidate and add test logic
+
 ## 0.0.27
 
 ### Patch Changes

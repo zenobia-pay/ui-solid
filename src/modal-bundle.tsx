@@ -1,18 +1,22 @@
 import { render } from "solid-js/web";
 import { ZenobiaPaymentModal } from "./components/ZenobiaPaymentModal";
 import { zenobiaPaymentStyles } from "./components/ZenobiaPaymentStyles";
-import type { TransferStatus } from "./components/ZenobiaPaymentButton";
+import type {
+  TransferStatus,
+  CreateTransferRequestResponse,
+} from "./components/ZenobiaPaymentButton";
 
 interface InitModalOpts {
   isOpen: boolean;
   onClose: () => void;
-  transferRequestId?: string;
   amount: number;
   discountAmount?: number;
-  signature?: string;
   qrCodeSize?: number;
   isTest?: boolean;
-  onSuccess?: (status: any) => void;
+  url?: string;
+  metadata?: Record<string, any>;
+  transferRequest?: CreateTransferRequestResponse;
+  onSuccess?: (response: CreateTransferRequestResponse, status: any) => void;
   onError?: (err: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
   target: string | HTMLElement;
@@ -45,12 +49,13 @@ function initZenobiaPayModal(opts: InitModalOpts) {
       <ZenobiaPaymentModal
         isOpen={opts.isOpen}
         onClose={opts.onClose}
-        transferRequestId={opts.transferRequestId}
-        signature={opts.signature}
         amount={opts.amount}
         discountAmount={opts.discountAmount}
         qrCodeSize={opts.qrCodeSize}
         isTest={opts.isTest}
+        url={opts.url}
+        metadata={opts.metadata}
+        transferRequest={opts.transferRequest}
         onSuccess={opts.onSuccess}
         onError={opts.onError}
         onStatusChange={opts.onStatusChange}

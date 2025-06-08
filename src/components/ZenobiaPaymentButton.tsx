@@ -1,17 +1,10 @@
-import {
-  createSignal,
-  Component,
-  createEffect,
-  onCleanup,
-  Show,
-} from "solid-js";
-import { ZenobiaClient } from "@zenobia/client";
+import { createSignal, Component, Show } from "solid-js";
 import { ZenobiaPaymentModal } from "./ZenobiaPaymentModal";
 import { zenobiaPaymentStyles } from "./ZenobiaPaymentStyles";
 
 export interface CreateTransferRequestResponse {
   transferRequestId: string;
-  merchantId: string;
+  merchantId?: string;
   expiry?: number;
   signature?: string;
 }
@@ -43,6 +36,7 @@ interface ZenobiaPaymentButtonProps {
   url: string; // Full URL to the payment endpoint
   metadata?: Record<string, any>; // Optional metadata
   buttonText?: string;
+  isTest?: boolean;
   buttonClass?: string;
   qrCodeSize?: number;
   discountAmount?: number; // discount amount in cents
@@ -77,14 +71,10 @@ const isIOS = (): boolean => {
 export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
   props
 ) => {
-  const [loading, setLoading] = createSignal<boolean>(false);
   const [animationState, setAnimationState] = createSignal<AnimationState>(
     AnimationState.INITIAL
   );
   const [isClosing, setIsClosing] = createSignal<boolean>(false);
-  const [transferRequest, setTransferRequest] =
-    createSignal<CreateTransferRequestResponse | null>(null);
-  const [error, setError] = createSignal<string | null>(null);
 
   // Get savings text for button
   const getSavingsText = () => {
@@ -100,49 +90,14 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
     }
   };
 
-  const handleClick = async () => {
-    if (loading()) return;
-    setLoading(true);
-    setError(null);
+  const handleClick = () => {
+    // Show QR screen immediately with placeholder
+    setAnimationState(AnimationState.QR_EXPANDING);
 
-    try {
-      // Show QR screen immediately with placeholder
-      setAnimationState(AnimationState.QR_EXPANDING);
-
-      // Add a small delay for the animation
-      setTimeout(() => {
-        setAnimationState(AnimationState.QR_VISIBLE);
-      }, 300);
-
-      // Create a new transfer request
-      const client = new ZenobiaClient();
-      const metadata = props.metadata || {
-        amount: props.amount,
-        statementItems: {
-          name: "Payment",
-          amount: props.amount,
-        },
-      };
-
-      const transfer = await client.createTransfer(props.url, metadata);
-
-      setTransferRequest({
-        transferRequestId: transfer.transferRequestId,
-        merchantId: transfer.merchantId,
-        expiry: transfer.expiry,
-        signature: transfer.signature,
-      });
-
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      setAnimationState(AnimationState.INITIAL);
-      setError(error instanceof Error ? error.message : "An error occurred");
-
-      if (props.onError && error instanceof Error) {
-        props.onError(error);
-      }
-    }
+    // Add a small delay for the animation
+    setTimeout(() => {
+      setAnimationState(AnimationState.QR_VISIBLE);
+    }, 300);
   };
 
   const handleClose = () => {
@@ -154,8 +109,6 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
 
     // Wait for animation to complete before resetting state
     setTimeout(() => {
-      setTransferRequest(null);
-
       // Reset closing state after animation completes
       setTimeout(() => {
         setIsClosing(false);
@@ -203,17 +156,13 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
         <ZenobiaPaymentModal
           isOpen={animationState() === AnimationState.QR_VISIBLE}
           onClose={handleClose}
-          transferRequestId={transferRequest()?.transferRequestId}
-          signature={transferRequest()?.signature}
           amount={props.amount}
           discountAmount={props.discountAmount}
           qrCodeSize={props.qrCodeSize}
+          isTest={props.isTest}
           url={props.url}
-          onSuccess={(status) => {
-            if (props.onSuccess && transferRequest()) {
-              props.onSuccess(transferRequest()!, status);
-            }
-          }}
+          metadata={props.metadata}
+          onSuccess={props.onSuccess}
           onError={props.onError}
           onStatusChange={props.onStatusChange}
         />

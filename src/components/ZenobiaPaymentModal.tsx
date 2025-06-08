@@ -7,7 +7,10 @@ import {
 } from "solid-js";
 import { ZenobiaClient } from "@zenobia/client";
 import QRCodeStyling from "qr-code-styling";
-import { TransferStatus } from "./ZenobiaPaymentButton";
+import {
+  TransferStatus,
+  CreateTransferRequestResponse,
+} from "./ZenobiaPaymentButton";
 
 interface ClientTransferStatus {
   status: string;
@@ -17,13 +20,17 @@ interface ClientTransferStatus {
 interface ZenobiaPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  transferRequestId?: string;
-  signature?: string;
   amount: number;
   discountAmount?: number;
   qrCodeSize?: number;
   isTest?: boolean;
-  onSuccess?: (status: ClientTransferStatus) => void;
+  url?: string;
+  metadata?: Record<string, any>;
+  transferRequest?: CreateTransferRequestResponse;
+  onSuccess?: (
+    response: CreateTransferRequestResponse,
+    status: ClientTransferStatus
+  ) => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
 }
@@ -43,33 +50,91 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
   const [zenobiaClient, setZenobiaClient] = createSignal<ZenobiaClient | null>(
     null
   );
+  const [transferRequest, setTransferRequest] =
+    createSignal<CreateTransferRequestResponse | null>(null);
+  const [isLoading, setIsLoading] = createSignal(false);
 
-  // Initialize WebSocket connection when transfer request ID is available
+  // Initialize WebSocket connection when modal opens
   createEffect(() => {
-    if (props.transferRequestId && !zenobiaClient()) {
-      const client = new ZenobiaClient();
+    if (props.isOpen && !zenobiaClient()) {
+      const client = new ZenobiaClient(props.isTest);
       setZenobiaClient(client);
 
-      // Listen to the existing transfer
-      client.listenToTransfer(
-        props.transferRequestId,
-        props.signature || "",
-        handleStatusUpdate,
-        handleWebSocketError,
-        handleConnectionChange
-      );
+      if (props.transferRequest) {
+        // If we have a transfer request, just listen to it
+        setTransferRequest(props.transferRequest);
+        client.listenToTransfer(
+          props.transferRequest.transferRequestId,
+          props.transferRequest.signature || "",
+          handleStatusUpdate,
+          handleWebSocketError,
+          handleConnectionChange
+        );
+      } else if (props.url) {
+        // If we have a URL, create a new transfer
+        setIsLoading(true);
+        setError(null);
+
+        const metadata = props.metadata || {
+          amount: props.amount,
+          statementItems: {
+            name: "Payment",
+            amount: props.amount,
+          },
+        };
+
+        client
+          .createTransfer(props.url, metadata)
+          .then((transfer) => {
+            setTransferRequest({
+              transferRequestId: transfer.transferRequestId,
+              merchantId: transfer.merchantId,
+              expiry: transfer.expiry,
+              signature: transfer.signature,
+            });
+
+            // Listen to the transfer status
+            client.listenToTransfer(
+              transfer.transferRequestId,
+              transfer.signature || "",
+              handleStatusUpdate,
+              handleWebSocketError,
+              handleConnectionChange
+            );
+          })
+          .catch((error) => {
+            setError(
+              error instanceof Error ? error.message : "An error occurred"
+            );
+            if (props.onError && error instanceof Error) {
+              props.onError(error);
+            }
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } else {
+        setError("No URL provided for creating a new transfer");
+      }
     }
   });
 
   // Generate QR code when transfer request is created
   createEffect(() => {
-    if (props.transferRequestId) {
-      const transferIdNoDashes = props.transferRequestId.replace(/-/g, "");
+    if (transferRequest()?.transferRequestId) {
+      const transferIdNoDashes = transferRequest()!.transferRequestId.replace(
+        /-/g,
+        ""
+      );
       const base64TransferId = btoa(transferIdNoDashes)
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=+$/, "");
-      const qrString = `https://zenobiapay.com/clip?id=${base64TransferId}`;
+      let qrString = `https://zenobiapay.com/clip?id=${base64TransferId}`;
+
+      if (props.isTest) {
+        qrString += "&type=test";
+      }
 
       // Use a slightly larger size for the QR code to match the new design
       const containerSize = props.qrCodeSize || 220;
@@ -119,8 +184,8 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
       case "COMPLETED":
       case "IN_FLIGHT":
         currentStatus = TransferStatus.COMPLETED;
-        if (props.onSuccess) {
-          props.onSuccess(status);
+        if (props.onSuccess && transferRequest()) {
+          props.onSuccess(transferRequest()!, status);
         }
         const client = zenobiaClient();
         if (client) {
@@ -253,7 +318,7 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
           </div>
           <div class="modal-body">
             <Show
-              when={qrCodeObject() && props.transferRequestId}
+              when={qrCodeObject() && transferRequest()}
               fallback={
                 <div
                   class="qr-code-container"
@@ -307,8 +372,10 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
             <div class="payment-status">
               <div class="spinner"></div>
               <div class="payment-instructions">
-                {!props.transferRequestId
+                {isLoading()
                   ? "Preparing payment..."
+                  : !transferRequest()
+                  ? "Creating payment..."
                   : "Waiting for payment"}
               </div>
             </div>
