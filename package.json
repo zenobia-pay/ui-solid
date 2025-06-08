@@ -1,6 +1,6 @@
 {
   "name": "@zenobia/ui-solid",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "Solid.js UI components for Zenobia Pay",
   "main": "dist/index.js",
   "module": "dist/index.js",

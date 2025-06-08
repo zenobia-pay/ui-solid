@@ -388,24 +388,25 @@ export const zenobiaPaymentStyles = `
   .zenobia-qr-placeholder::after {
     content: "";
     position: absolute;
-    top: -100%;
+    top: 0;
     left: -100%;
     width: 200%;
-    height: 200%;
-    background: linear-gradient(135deg,
-      rgba(255,255,255,0) 0%,
-      rgba(255,255,255,1) 50%,
-      rgba(255,255,255,0) 100%);
-    animation: shimmer 0.8s infinite linear;
-    box-shadow: 0 0 30px 30px rgba(255,255,255,0.5);
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmer 1.5s infinite ease-in-out;
   }
 
   @keyframes shimmer {
     0% {
-      transform: translate(0%, 0%);
+      transform: translateX(-100%);
     }
     100% {
-      transform: translate(50%, 50%);
+      transform: translateX(100%);
     }
   }
   .zenobia-qr-image {
