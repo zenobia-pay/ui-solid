@@ -22,7 +22,7 @@ interface ZenobiaPaymentModalProps {
   amount: number;
   discountAmount?: number;
   qrCodeSize?: number;
-  url: string; // Full URL to the payment endpoint
+  isTest?: boolean;
   onSuccess?: (status: ClientTransferStatus) => void;
   onError?: (error: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
@@ -214,6 +214,41 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
             <div class="header-content">
               <h3>Pay by bank with Zenobia</h3>
               <p class="subtitle">Scan to complete your purchase</p>
+              <Show when={props.isTest}>
+                <div class="test-mode-badge" tabindex="0">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="10"
+                      cy="10"
+                      r="9"
+                      stroke="#b45309"
+                      stroke-width="2"
+                      fill="#fef3c7"
+                    />
+                    <text
+                      x="10"
+                      y="15"
+                      text-anchor="middle"
+                      font-size="12"
+                      fill="#b45309"
+                      font-family="Arial"
+                      font-weight="bold"
+                    >
+                      i
+                    </text>
+                  </svg>
+                  <span class="test-mode-badge-text">Test Mode</span>
+                  <div class="test-mode-tooltip">
+                    Test Mode: No real money will be moved.
+                  </div>
+                </div>
+              </Show>
             </div>
           </div>
           <div class="modal-body">

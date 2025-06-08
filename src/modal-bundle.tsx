@@ -9,7 +9,9 @@ interface InitModalOpts {
   transferRequestId?: string;
   amount: number;
   discountAmount?: number;
+  signature?: string;
   qrCodeSize?: number;
+  isTest?: boolean;
   onSuccess?: (status: any) => void;
   onError?: (err: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
@@ -44,9 +46,11 @@ function initZenobiaPayModal(opts: InitModalOpts) {
         isOpen={opts.isOpen}
         onClose={opts.onClose}
         transferRequestId={opts.transferRequestId}
+        signature={opts.signature}
         amount={opts.amount}
         discountAmount={opts.discountAmount}
         qrCodeSize={opts.qrCodeSize}
+        isTest={opts.isTest}
         onSuccess={opts.onSuccess}
         onError={opts.onError}
         onStatusChange={opts.onStatusChange}

@@ -252,13 +252,17 @@ export const zenobiaPaymentStyles = `
   }
 
   .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 0 0 24px;
+    display: block;
     position: relative;
+    padding: 0 0 24px;
     background: #ffffff;
     border-bottom: 1px solid #f0f0f0;
+  }
+
+  .header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .modal-header h3 {
@@ -429,5 +433,87 @@ export const zenobiaPaymentStyles = `
     to {
       transform: rotate(360deg);
     }
+  }
+
+  .test-mode-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #fef3c7;
+    color: #92400e;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 8px;
+    width: fit-content;
+    border: 1px solid #fbbf24;
+  }
+
+  .test-mode-indicator svg {
+    color: #92400e;
+  }
+
+  .test-mode-indicator:hover {
+    background-color: #fde68a;
+  }
+
+  .test-mode-badge-wrapper {
+    position: static;
+    top: unset;
+    right: unset;
+    z-index: unset;
+    display: flex;
+    align-items: center;
+  }
+  .test-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    padding: 2px 12px 2px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    transition: box-shadow 0.2s;
+    margin-top: 10px;
+  }
+  .test-mode-badge:focus {
+    box-shadow: 0 0 0 2px #fde68a;
+  }
+  .test-mode-badge svg {
+    flex-shrink: 0;
+    display: block;
+  }
+  .test-mode-badge-text {
+    margin-left: 2px;
+    margin-right: 2px;
+  }
+  .test-mode-tooltip {
+    display: none;
+    position: absolute;
+    top: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fffbe9;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    z-index: 10;
+    pointer-events: none;
+  }
+  .test-mode-badge:hover .test-mode-tooltip,
+  .test-mode-badge:focus .test-mode-tooltip {
+    display: block;
   }
 `;

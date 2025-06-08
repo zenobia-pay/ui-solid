@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.27
+
+### Patch Changes
+
+- Add test mode
+
 ## 0.0.26
 
 ### Patch Changes
