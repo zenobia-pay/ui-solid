@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.30
+
+### Patch Changes
+
+- Mobile ios popup
+
 ## 0.0.29
 
 ### Patch Changes
