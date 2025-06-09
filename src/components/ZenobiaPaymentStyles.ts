@@ -517,4 +517,37 @@ export const zenobiaPaymentStyles = `
   .test-mode-badge:focus .test-mode-tooltip {
     display: block;
   }
+
+  /* Mobile button styles */
+  .mobile-button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+  }
+
+  .mobile-button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 12px;
+    padding: 5px 10px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    border-radius: 4px;
+  }
+
+  .mobile-button:hover {
+    opacity: 1;
+    background-color: #f9fafb;
+  }
+
+  .mobile-button svg {
+    width: 14px;
+    height: 14px;
+    stroke: #9ca3af;
+  }
 `;

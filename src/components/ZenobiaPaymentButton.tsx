@@ -148,7 +148,7 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
       {/* QR Code Modal */}
       <Show
         when={
-          !isIOS() &&
+          // !isIOS() &&
           (animationState() === AnimationState.QR_EXPANDING ||
             animationState() === AnimationState.QR_VISIBLE)
         }

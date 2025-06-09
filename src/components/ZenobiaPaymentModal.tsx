@@ -53,6 +53,7 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
   const [transferRequest, setTransferRequest] =
     createSignal<CreateTransferRequestResponse | null>(null);
   const [isLoading, setIsLoading] = createSignal(false);
+  const [qrCodeUrl, setQrCodeUrl] = createSignal<string>("");
 
   // Initialize WebSocket connection when modal opens
   createEffect(() => {
@@ -135,6 +136,9 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
       if (props.isTest) {
         qrString += "&type=test";
       }
+      
+      // Store the QR code URL for the mobile button
+      setQrCodeUrl(qrString);
 
       // Use a slightly larger size for the QR code to match the new design
       const containerSize = props.qrCodeSize || 220;
@@ -381,6 +385,21 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
             </div>
             <Show when={error()}>
               <div class="zenobia-error">{error()}</div>
+            </Show>
+            <Show when={qrCodeUrl() !== ""}>
+              <div class="mobile-button-container">
+                <button 
+                  class="mobile-button" 
+                  onClick={() => window.open(qrCodeUrl(), '_blank')}
+                  title="Open on mobile device"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                    <line x1="12" y1="18" x2="12" y2="18" />
+                  </svg>
+                  <span>Open on mobile</span>
+                </button>
+              </div>
             </Show>
           </div>
         </div>
