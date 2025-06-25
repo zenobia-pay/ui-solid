@@ -35,6 +35,28 @@ interface ZenobiaPaymentModalProps {
   onStatusChange?: (status: TransferStatus) => void;
 }
 
+// Utility function to detect mobile devices
+const isMobile = (): boolean => {
+  if (typeof window === "undefined") return false;
+
+  const userAgent = window.navigator.userAgent.toLowerCase();
+
+  // Check for mobile devices
+  const isMobileDevice =
+    /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+      userAgent
+    );
+
+  // Check for touch capability
+  const hasTouchScreen =
+    "ontouchstart" in window || navigator.maxTouchPoints > 0;
+
+  // Check screen size (mobile typically has smaller screens)
+  const isSmallScreen = window.innerWidth <= 768;
+
+  return isMobileDevice || (hasTouchScreen && isSmallScreen);
+};
+
 export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
   props
 ) => {
@@ -136,7 +158,7 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
       if (props.isTest) {
         qrString += "&type=test";
       }
-      
+
       // Store the QR code URL for the mobile button
       setQrCodeUrl(qrString);
 
@@ -322,22 +344,51 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
           </div>
           <div class="modal-body">
             <Show
-              when={qrCodeObject() && transferRequest()}
+              when={!isMobile() && qrCodeUrl() !== ""}
               fallback={
-                <div
-                  class="qr-code-container"
-                  style={{
-                    width: props.qrCodeSize ? `${props.qrCodeSize}px` : "220px",
-                    height: props.qrCodeSize
-                      ? `${props.qrCodeSize}px`
-                      : "220px",
-                    display: "flex",
-                    "justify-content": "center",
-                    "align-items": "center",
-                  }}
+                <Show
+                  when={qrCodeObject() && transferRequest()}
+                  fallback={
+                    <div
+                      class="qr-code-container"
+                      style={{
+                        width: props.qrCodeSize
+                          ? `${props.qrCodeSize}px`
+                          : "220px",
+                        height: props.qrCodeSize
+                          ? `${props.qrCodeSize}px`
+                          : "220px",
+                        display: "flex",
+                        "justify-content": "center",
+                        "align-items": "center",
+                      }}
+                    >
+                      <div
+                        class="zenobia-qr-placeholder"
+                        style={{
+                          width: props.qrCodeSize
+                            ? `${props.qrCodeSize}px`
+                            : "220px",
+                          height: props.qrCodeSize
+                            ? `${props.qrCodeSize}px`
+                            : "220px",
+                        }}
+                      />
+                    </div>
+                  }
                 >
                   <div
-                    class="zenobia-qr-placeholder"
+                    class="qr-code-container"
+                    id="qrcode-container"
+                    ref={(el) => {
+                      qrContainerRef.current = el;
+                      const qrCode = qrCodeObject();
+                      if (qrCode && el) {
+                        // Clear any existing content
+                        el.innerHTML = "";
+                        qrCode.append(el);
+                      }
+                    }}
                     style={{
                       width: props.qrCodeSize
                         ? `${props.qrCodeSize}px`
@@ -345,31 +396,54 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
                       height: props.qrCodeSize
                         ? `${props.qrCodeSize}px`
                         : "220px",
+                      display: "flex",
+                      "justify-content": "center",
+                      "align-items": "center",
                     }}
-                  />
-                </div>
+                  ></div>
+                </Show>
               }
             >
               <div
-                class="qr-code-container"
-                id="qrcode-container"
-                ref={(el) => {
-                  qrContainerRef.current = el;
-                  const qrCode = qrCodeObject();
-                  if (qrCode && el) {
-                    // Clear any existing content
-                    el.innerHTML = "";
-                    qrCode.append(el);
-                  }
-                }}
-                style={{
-                  width: props.qrCodeSize ? `${props.qrCodeSize}px` : "220px",
-                  height: props.qrCodeSize ? `${props.qrCodeSize}px` : "220px",
-                  display: "flex",
-                  "justify-content": "center",
-                  "align-items": "center",
-                }}
-              ></div>
+                class="mobile-button-container"
+                style={{ "text-align": "center", margin: "20px 0" }}
+              >
+                <button
+                  class="mobile-button"
+                  onClick={() => window.open(qrCodeUrl(), "_blank")}
+                  title="Open on mobile device"
+                  style={{
+                    "background-color": "#000",
+                    color: "#fff",
+                    border: "none",
+                    padding: "16px 24px",
+                    "border-radius": "8px",
+                    "font-size": "16px",
+                    "font-weight": "500",
+                    cursor: "pointer",
+                    display: "flex",
+                    "align-items": "center",
+                    gap: "8px",
+                    margin: "0 auto",
+                    transition: "background-color 0.2s ease",
+                  }}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                    <line x1="12" y1="18" x2="12" y2="18" />
+                  </svg>
+                  <span>Open app to continue</span>
+                </button>
+              </div>
             </Show>
             <div class="payment-amount">${(props.amount / 100).toFixed(2)}</div>
             <div class="savings-badge">{cashbackMessage()}</div>
@@ -385,21 +459,6 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
             </div>
             <Show when={error()}>
               <div class="zenobia-error">{error()}</div>
-            </Show>
-            <Show when={qrCodeUrl() !== ""}>
-              <div class="mobile-button-container">
-                <button 
-                  class="mobile-button" 
-                  onClick={() => window.open(qrCodeUrl(), '_blank')}
-                  title="Open on mobile device"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                    <line x1="12" y1="18" x2="12" y2="18" />
-                  </svg>
-                  <span>Open on mobile</span>
-                </button>
-              </div>
             </Show>
           </div>
         </div>
