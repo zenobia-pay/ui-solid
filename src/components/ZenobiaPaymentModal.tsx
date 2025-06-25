@@ -344,7 +344,7 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
           </div>
           <div class="modal-body">
             <Show
-              when={!isMobile() && qrCodeUrl() !== ""}
+              when={isMobile() && qrCodeUrl() !== ""}
               fallback={
                 <Show
                   when={qrCodeObject() && transferRequest()}

@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.32
+
+### Patch Changes
+
+- Very important fix
+
 ## 0.0.31
 
 ### Patch Changes
