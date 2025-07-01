@@ -28,7 +28,7 @@ npm run release
 4. Pushes changes and tags to current repository
 5. Publishes to npm
 6. Clones the landing page repository
-7. Copies built files to `public/version/{version}/` directory
+7. Copies built files to `public/static/{version}/` directory
 8. Commits and pushes to landing page repository
 9. Cleans up temporary files
 
@@ -69,7 +69,7 @@ After a release, the landing page repository will have this structure:
 
 ```
 public/
-  version/
+  static/
     0.0.33/
       zenobia-pay.js
       zenobia-pay-modal.js

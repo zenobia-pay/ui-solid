@@ -64,7 +64,7 @@ async function main() {
   try {
     // Clone landing page repository
     console.log("📥 Cloning landing page repository...");
-    runCommand(`git clone ${landingPageRepo} ${tempDir}`);
+    runCommand(`git clone "${landingPageRepo}" "${tempDir}"`);
 
     // Create version directory
     const versionDir = path.join(tempDir, "public", "static", version);

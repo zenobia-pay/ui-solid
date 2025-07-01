@@ -61,11 +61,11 @@ jobs:
           echo "Deploying version: $VERSION"
 
           # Create version directory
-          mkdir -p temp-landing-page/public/version/$VERSION
+          mkdir -p temp-landing-page/public/static/$VERSION
 
           # Copy build outputs
-          cp dist/zenobia/zenobia-pay.js temp-landing-page/public/version/$VERSION/
-          cp dist/zenobia-modal/zenobia-pay-modal.js temp-landing-page/public/version/$VERSION/
+          cp dist/zenobia/zenobia-pay.js temp-landing-page/public/static/$VERSION/
+          cp dist/zenobia-modal/zenobia-pay-modal.js temp-landing-page/public/static/$VERSION/
 
           # Commit and push
           cd temp-landing-page
