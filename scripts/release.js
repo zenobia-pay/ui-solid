@@ -67,8 +67,12 @@ async function main() {
     runCommand(`git clone "${landingPageRepo}" "${tempDir}"`);
 
     // Create version directory
-    const versionDir = path.join(tempDir, "public", "static", version);
+    const versionDir = path.join(tempDir, "public", "embed", version);
     await fs.mkdir(versionDir, { recursive: true });
+
+    // Create latest directory
+    const latestDir = path.join(tempDir, "public", "embed", "latest");
+    await fs.mkdir(latestDir, { recursive: true });
 
     // Copy build outputs
     console.log("📋 Copying build outputs...");
@@ -79,7 +83,9 @@ async function main() {
       "../dist/zenobia/zenobia-pay.js"
     );
     const zenobiaDest = path.join(versionDir, "zenobia-pay.js");
+    const zenobiaLatestDest = path.join(latestDir, "zenobia-pay.js");
     await fs.copyFile(zenobiaSource, zenobiaDest);
+    await fs.copyFile(zenobiaSource, zenobiaLatestDest);
 
     // Copy modal build
     const modalSource = path.join(
@@ -87,7 +93,9 @@ async function main() {
       "../dist/zenobia-modal/zenobia-pay-modal.js"
     );
     const modalDest = path.join(versionDir, "zenobia-pay-modal.js");
+    const modalLatestDest = path.join(latestDir, "zenobia-pay-modal.js");
     await fs.copyFile(modalSource, modalDest);
+    await fs.copyFile(modalSource, modalLatestDest);
 
     // Commit and push to landing page
     console.log("💾 Committing to landing page...");
