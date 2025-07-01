@@ -9,7 +9,7 @@
   "scripts": {
     "build": "vite build",
     "test": "echo \"No tests yet\"",
-    "release": "changeset version && git add . && git commit -m \"chore: release\" && git push && git push --tags && npm run build && changeset publish",
+    "release": "node scripts/release.js",
     "build:zenobia": "vite build --config vite.zenobia.config.ts",
     "build:zenobia-bigcommerce": "vite build --config vite.zenobia-bigcommerce.config.ts",
     "build:modal": "vite build --config vite.zenobia-modal.config.ts"

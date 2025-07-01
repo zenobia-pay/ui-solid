@@ -9,3 +9,6 @@ package-lock.json
 
 # Build files
 dist/
+
+# Temporary directories
+temp-landing-page/

@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".changeset/**"
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+      packages: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: npm run release
+          title: "chore: release"
+          commit: "chore: release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Add token for landing page repository access
+          LANDING_PAGE_TOKEN: ${{ secrets.LANDING_PAGE_TOKEN }}
+
+      - name: Setup Git for Landing Page
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy to Landing Page
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          # Clone landing page repository
+          git clone https://x-access-token:${{ secrets.LANDING_PAGE_TOKEN }}@github.com/zenobia-pay/landing-page.git temp-landing-page
+
+          # Get current version
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Deploying version: $VERSION"
+
+          # Create version directory
+          mkdir -p temp-landing-page/public/version/$VERSION
+
+          # Copy build outputs
+          cp dist/zenobia/zenobia-pay.js temp-landing-page/public/version/$VERSION/
+          cp dist/zenobia-modal/zenobia-pay-modal.js temp-landing-page/public/version/$VERSION/
+
+          # Commit and push
+          cd temp-landing-page
+          git add .
+          git commit -m "feat: add version $VERSION of zenobia-pay components"
+          git push
+
+          # Cleanup
+          cd ..
+          rm -rf temp-landing-page
