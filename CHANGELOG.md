@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.34
+
+### Patch Changes
+
+- Updates to qr
+
 ## 0.0.33
 
 ### Patch Changes
