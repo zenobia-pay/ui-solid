@@ -107,13 +107,35 @@ async function main() {
     await fs.copyFile(modalSource, modalDest);
     await fs.copyFile(modalSource, modalLatestDest);
 
-    // Commit and push the landing page changes
+    // Commit the landing page changes
     console.log("💾 Committing landing page changes...");
-    runCommand("git add apps/landing-page/public/embed/");
+    runCommand("git add .");
     runCommand(
       `git commit -m "feat: add version ${version} of zenobia-pay components"`
     );
-    runCommand("git push");
+
+    // Ensure no uncommitted changes in the landing page directory
+    console.log("🔍 Checking for uncommitted changes in landing page...");
+    try {
+      const status = execSync("git status --porcelain apps/landing-page/", {
+        encoding: "utf8",
+      });
+      if (status.trim()) {
+        console.error(
+          "❌ There are uncommitted changes in the landing page directory:"
+        );
+        console.error(status);
+        process.exit(1);
+      }
+    } catch (error) {
+      // If the command fails, it might mean no changes, which is fine
+      console.log("✅ No uncommitted changes found in landing page directory");
+    }
+
+    // Run release in the landing page directory
+    console.log("🚀 Running release in landing page directory...");
+    const landingPageDir = path.join(rootDir, "apps", "landing-page");
+    runCommand("npm run release", landingPageDir);
 
     console.log("✅ Successfully deployed to landing page!");
   } catch (error) {
