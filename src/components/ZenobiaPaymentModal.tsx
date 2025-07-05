@@ -27,6 +27,8 @@ interface ZenobiaPaymentModalProps {
   url?: string;
   metadata?: Record<string, any>;
   transferRequest?: CreateTransferRequestResponse;
+  hideQrOnMobile?: boolean;
+  showCashback?: boolean;
   onSuccess?: (
     response: CreateTransferRequestResponse,
     status: ClientTransferStatus
@@ -64,6 +66,7 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
     null
   );
   const qrContainerRef = { current: null as HTMLDivElement | null };
+  const qrMobileContainerRef = { current: null as HTMLDivElement | null };
   const [transferStatus, setTransferStatus] = createSignal<TransferStatus>(
     TransferStatus.PENDING
   );
@@ -76,10 +79,19 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
     createSignal<CreateTransferRequestResponse | null>(null);
   const [isLoading, setIsLoading] = createSignal(false);
   const [qrCodeUrl, setQrCodeUrl] = createSignal<string>("");
+  const [qrScanned, setQrScanned] = createSignal(false);
+  const [isReconnecting, setIsReconnecting] = createSignal(false);
+  const [websocketError, setWebsocketError] = createSignal<string | null>(null);
 
   // Initialize WebSocket connection when modal opens
   createEffect(() => {
     if (props.isOpen && !zenobiaClient()) {
+      // Reset states for new session
+      setQrScanned(false);
+      setIsReconnecting(false);
+      setWebsocketError(null);
+      setError(null);
+
       const client = new ZenobiaClient(props.isTest);
       setZenobiaClient(client);
 
@@ -91,7 +103,8 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
           props.transferRequest.signature || "",
           handleStatusUpdate,
           handleWebSocketError,
-          handleConnectionChange
+          handleConnectionChange,
+          handleScanUpdate
         );
       } else if (props.url) {
         // If we have a URL, create a new transfer
@@ -122,7 +135,8 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
               transfer.signature || "",
               handleStatusUpdate,
               handleWebSocketError,
-              handleConnectionChange
+              handleConnectionChange,
+              handleScanUpdate
             );
           })
           .catch((error) => {
@@ -190,12 +204,23 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
       });
 
       setQrCodeObject(qrCode);
+    }
+  });
 
-      // If the container ref is already available, append the QR code
+  // Handle QR code appending to containers
+  createEffect(() => {
+    const qrCode = qrCodeObject();
+    if (qrCode) {
+      // Handle desktop container
       if (qrContainerRef.current) {
-        // Clear any existing content
         qrContainerRef.current.innerHTML = "";
         qrCode.append(qrContainerRef.current);
+      }
+
+      // Handle mobile container
+      if (qrMobileContainerRef.current) {
+        qrMobileContainerRef.current.innerHTML = "";
+        qrCode.append(qrMobileContainerRef.current);
       }
     }
   });
@@ -249,7 +274,25 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
   // Handle WebSocket error
   const handleWebSocketError = (errorMsg: string) => {
     console.error("WebSocket error:", errorMsg);
-    setError(errorMsg);
+
+    // Check if this is a disconnection error (common WebSocket disconnection messages)
+    const isDisconnectionError =
+      errorMsg.toLowerCase().includes("disconnect") ||
+      errorMsg.toLowerCase().includes("connection lost") ||
+      errorMsg.toLowerCase().includes("network error") ||
+      errorMsg.toLowerCase().includes("timeout");
+
+    if (isDisconnectionError) {
+      // For disconnection errors, show reconnecting state instead of error
+      setWebsocketError(errorMsg);
+      setIsReconnecting(true);
+    } else {
+      // For other errors, set the error but don't close the modal
+      setError(errorMsg);
+      if (props.onError) {
+        props.onError(new Error(errorMsg));
+      }
+    }
   };
 
   // Handle WebSocket connection status change
@@ -259,6 +302,30 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
       connected ? "Connected" : "Disconnected"
     );
     setIsConnected(connected);
+
+    if (connected) {
+      // Connection restored, clear reconnecting state
+      setIsReconnecting(false);
+      setWebsocketError(null);
+    } else {
+      // Connection lost, set reconnecting state
+      setIsReconnecting(true);
+    }
+  };
+
+  // Handle scan update
+  const handleScanUpdate = (scanData: {
+    type: string;
+    scanType: string;
+    transferId: string;
+    timestamp: number;
+  }) => {
+    console.log("Scan update received:", scanData.scanType);
+    if (scanData.scanType === "scanned") {
+      setQrScanned(true);
+    } else if (scanData.scanType === "unscanned") {
+      setQrScanned(false);
+    }
   };
 
   // Cleanup on component unmount
@@ -266,6 +333,22 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
     const client = zenobiaClient();
     if (client) {
       client.disconnect();
+    }
+  });
+
+  // Cleanup when modal closes
+  createEffect(() => {
+    if (!props.isOpen) {
+      const client = zenobiaClient();
+      if (client) {
+        client.disconnect();
+        setZenobiaClient(null);
+      }
+      // Reset states
+      setQrScanned(false);
+      setIsReconnecting(false);
+      setWebsocketError(null);
+      setError(null);
     }
   });
 
@@ -277,6 +360,8 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
 
   // Format cashback message based on amount
   const cashbackMessage = () => {
+    if (!props.showCashback) return null;
+
     const discount = discountAmount();
     if (discount < 1000) {
       // Less than $10 (in cents)
@@ -344,7 +429,7 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
           </div>
           <div class="modal-body">
             <Show
-              when={isMobile() && qrCodeUrl() !== ""}
+              when={isMobile() && qrCodeUrl() !== "" && !props.hideQrOnMobile}
               fallback={
                 <Show
                   when={qrCodeObject() && transferRequest()}
@@ -382,11 +467,159 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
                     id="qrcode-container"
                     ref={(el) => {
                       qrContainerRef.current = el;
-                      const qrCode = qrCodeObject();
-                      if (qrCode && el) {
-                        // Clear any existing content
-                        el.innerHTML = "";
-                        qrCode.append(el);
+                    }}
+                    style={{
+                      width: props.qrCodeSize
+                        ? `${props.qrCodeSize}px`
+                        : "220px",
+                      height: props.qrCodeSize
+                        ? `${props.qrCodeSize}px`
+                        : "220px",
+                      display: "flex",
+                      "justify-content": "center",
+                      "align-items": "center",
+                      position: "relative",
+                    }}
+                  >
+                    <Show when={qrScanned()}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: "rgba(0, 0, 0, 0.95)",
+                          display: "flex",
+                          "justify-content": "center",
+                          "align-items": "center",
+                          "border-radius": "8px",
+                          color: "white",
+                          "font-size": "16px",
+                          "font-weight": "500",
+                          "text-align": "center",
+                          padding: "20px",
+                          "z-index": "10",
+                        }}
+                      >
+                        Complete on your phone
+                      </div>
+                    </Show>
+                    <Show when={isReconnecting()}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: "rgba(0, 0, 0, 0.9)",
+                          display: "flex",
+                          "justify-content": "center",
+                          "align-items": "center",
+                          "border-radius": "8px",
+                          color: "white",
+                          "font-size": "16px",
+                          "font-weight": "500",
+                          "text-align": "center",
+                          padding: "20px",
+                          "z-index": "10",
+                        }}
+                      >
+                        Attempting to reconnect...
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
+              }
+            >
+              <div style={{ "text-align": "center", margin: "20px 0" }}>
+                {/* Mobile button */}
+                <div
+                  class="mobile-button-container"
+                  style={{ "text-align": "center", margin: "20px 0" }}
+                >
+                  <button
+                    class="mobile-button"
+                    onClick={() => window.open(qrCodeUrl(), "_blank")}
+                    title="Open on mobile device"
+                    style={{
+                      "background-color": "#000",
+                      color: "#fff",
+                      border: "none",
+                      padding: "16px 24px",
+                      "border-radius": "8px",
+                      "font-size": "16px",
+                      "font-weight": "500",
+                      cursor: "pointer",
+                      display: "flex",
+                      "align-items": "center",
+                      gap: "8px",
+                      margin: "0 auto",
+                      transition: "background-color 0.2s ease",
+                    }}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                      <line x1="12" y1="18" x2="12" y2="18" />
+                    </svg>
+                    <span>Open app to continue</span>
+                  </button>
+                </div>
+
+                {/* QR Code for mobile */}
+                <Show
+                  when={qrCodeObject() && transferRequest()}
+                  fallback={
+                    <div
+                      class="qr-code-container"
+                      style={{
+                        width: props.qrCodeSize
+                          ? `${props.qrCodeSize}px`
+                          : "220px",
+                        height: props.qrCodeSize
+                          ? `${props.qrCodeSize}px`
+                          : "220px",
+                        display: "flex",
+                        "justify-content": "center",
+                        "align-items": "center",
+                        margin: "20px auto",
+                      }}
+                    >
+                      <div
+                        class="zenobia-qr-placeholder"
+                        style={{
+                          width: props.qrCodeSize
+                            ? `${props.qrCodeSize}px`
+                            : "220px",
+                          height: props.qrCodeSize
+                            ? `${props.qrCodeSize}px`
+                            : "220px",
+                        }}
+                      />
+                    </div>
+                  }
+                >
+                  <div
+                    class="qr-code-container"
+                    id="qrcode-container-mobile"
+                    ref={(el) => {
+                      if (el) {
+                        const qrCode = qrCodeObject();
+                        if (qrCode) {
+                          // Clear any existing content
+                          el.innerHTML = "";
+                          qrCode.append(el);
+                        }
                       }
                     }}
                     style={{
@@ -399,54 +632,66 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
                       display: "flex",
                       "justify-content": "center",
                       "align-items": "center",
+                      margin: "20px auto",
+                      position: "relative",
                     }}
-                  ></div>
-                </Show>
-              }
-            >
-              <div
-                class="mobile-button-container"
-                style={{ "text-align": "center", margin: "20px 0" }}
-              >
-                <button
-                  class="mobile-button"
-                  onClick={() => window.open(qrCodeUrl(), "_blank")}
-                  title="Open on mobile device"
-                  style={{
-                    "background-color": "#000",
-                    color: "#fff",
-                    border: "none",
-                    padding: "16px 24px",
-                    "border-radius": "8px",
-                    "font-size": "16px",
-                    "font-weight": "500",
-                    cursor: "pointer",
-                    display: "flex",
-                    "align-items": "center",
-                    gap: "8px",
-                    margin: "0 auto",
-                    transition: "background-color 0.2s ease",
-                  }}
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
                   >
-                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                    <line x1="12" y1="18" x2="12" y2="18" />
-                  </svg>
-                  <span>Open app to continue</span>
-                </button>
+                    <Show when={qrScanned()}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: "rgba(0, 0, 0, 0.95)",
+                          display: "flex",
+                          "justify-content": "center",
+                          "align-items": "center",
+                          "border-radius": "8px",
+                          color: "white",
+                          "font-size": "16px",
+                          "font-weight": "500",
+                          "text-align": "center",
+                          padding: "20px",
+                          "z-index": "10",
+                        }}
+                      >
+                        Complete on your phone
+                      </div>
+                    </Show>
+                    <Show when={isReconnecting()}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: "rgba(0, 0, 0, 0.9)",
+                          display: "flex",
+                          "justify-content": "center",
+                          "align-items": "center",
+                          "border-radius": "8px",
+                          color: "white",
+                          "font-size": "16px",
+                          "font-weight": "500",
+                          "text-align": "center",
+                          padding: "20px",
+                          "z-index": "10",
+                        }}
+                      >
+                        Attempting to reconnect...
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
               </div>
             </Show>
             <div class="payment-amount">${(props.amount / 100).toFixed(2)}</div>
-            <div class="savings-badge">{cashbackMessage()}</div>
+            <Show when={cashbackMessage()}>
+              <div class="savings-badge">{cashbackMessage()}</div>
+            </Show>
             <div class="payment-status">
               <div class="spinner"></div>
               <div class="payment-instructions">
@@ -454,10 +699,12 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
                   ? "Preparing payment..."
                   : !transferRequest()
                   ? "Creating payment..."
+                  : isReconnecting()
+                  ? "Reconnecting..."
                   : "Waiting for payment"}
               </div>
             </div>
-            <Show when={error()}>
+            <Show when={error() && !isReconnecting()}>
               <div class="zenobia-error">{error()}</div>
             </Show>
           </div>
