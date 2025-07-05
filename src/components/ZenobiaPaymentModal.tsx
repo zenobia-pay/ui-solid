@@ -210,19 +210,22 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
   // Handle QR code appending to containers
   createEffect(() => {
     const qrCode = qrCodeObject();
-    if (qrCode) {
-      // Handle desktop container
-      if (qrContainerRef.current) {
-        qrContainerRef.current.innerHTML = "";
-        qrCode.append(qrContainerRef.current);
-      }
+    // Defer to next tick to ensure DOM is ready
+    setTimeout(() => {
+      if (qrCode) {
+        // Handle desktop container
+        if (qrContainerRef.current) {
+          qrContainerRef.current.innerHTML = "";
+          qrCode.append(qrContainerRef.current);
+        }
 
-      // Handle mobile container
-      if (qrMobileContainerRef.current) {
-        qrMobileContainerRef.current.innerHTML = "";
-        qrCode.append(qrMobileContainerRef.current);
+        // Handle mobile container
+        if (qrMobileContainerRef.current) {
+          qrMobileContainerRef.current.innerHTML = "";
+          qrCode.append(qrMobileContainerRef.current);
+        }
       }
-    }
+    }, 0);
   });
 
   // Handle WebSocket status update
