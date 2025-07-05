@@ -16,6 +16,8 @@ interface InitModalOpts {
   url?: string;
   metadata?: Record<string, any>;
   transferRequest?: CreateTransferRequestResponse;
+  hideQrOnMobile?: boolean;
+  showCashback?: boolean;
   onSuccess?: (response: CreateTransferRequestResponse, status: any) => void;
   onError?: (err: Error) => void;
   onStatusChange?: (status: TransferStatus) => void;
@@ -56,6 +58,8 @@ function initZenobiaPayModal(opts: InitModalOpts) {
         url={opts.url}
         metadata={opts.metadata}
         transferRequest={opts.transferRequest}
+        hideQrOnMobile={opts.hideQrOnMobile}
+        showCashback={opts.showCashback}
         onSuccess={opts.onSuccess}
         onError={opts.onError}
         onStatusChange={opts.onStatusChange}
