@@ -40,6 +40,8 @@ interface ZenobiaPaymentButtonProps {
   buttonClass?: string;
   qrCodeSize?: number;
   discountAmount?: number; // discount amount in cents
+  hideQrOnMobile?: boolean; // New prop to control QR display on mobile
+  showCashback?: boolean; // New prop to control cashback display
   onSuccess?: (
     response: CreateTransferRequestResponse,
     status: ClientTransferStatus
@@ -164,6 +166,8 @@ export const ZenobiaPaymentButton: Component<ZenobiaPaymentButtonProps> = (
           onSuccess={props.onSuccess}
           onError={props.onError}
           onStatusChange={props.onStatusChange}
+          hideQrOnMobile={props.hideQrOnMobile}
+          showCashback={props.showCashback}
         />
       </Show>
     </div>
