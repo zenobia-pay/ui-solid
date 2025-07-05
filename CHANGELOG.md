@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.33
+
+### Patch Changes
+
+- Better disconnection handling, know scan status
+
 ## 0.0.32
 
 ### Patch Changes
