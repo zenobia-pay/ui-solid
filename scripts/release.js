@@ -58,20 +58,30 @@ async function main() {
   // Step 6: Deploy to landing page
   console.log("\n🌐 Deploying to landing page...");
 
-  const tempDir = path.join(__dirname, "../temp-landing-page");
-  const landingPageRepo = "https://github.com/zenobia-pay/landing-page.git";
-
   try {
-    // Clone landing page repository
-    console.log("📥 Cloning landing page repository...");
-    runCommand(`git clone "${landingPageRepo}" "${tempDir}"`);
+    // Get the root directory (3 levels up from packages/ui-solid/scripts)
+    const rootDir = path.join(__dirname, "../../..");
 
     // Create version directory
-    const versionDir = path.join(tempDir, "public", "embed", version);
+    const versionDir = path.join(
+      rootDir,
+      "apps",
+      "landing-page",
+      "public",
+      "embed",
+      version
+    );
     await fs.mkdir(versionDir, { recursive: true });
 
     // Create latest directory
-    const latestDir = path.join(tempDir, "public", "embed", "latest");
+    const latestDir = path.join(
+      rootDir,
+      "apps",
+      "landing-page",
+      "public",
+      "embed",
+      "latest"
+    );
     await fs.mkdir(latestDir, { recursive: true });
 
     // Copy build outputs
@@ -97,26 +107,18 @@ async function main() {
     await fs.copyFile(modalSource, modalDest);
     await fs.copyFile(modalSource, modalLatestDest);
 
-    // Commit and push to landing page
-    console.log("💾 Committing to landing page...");
-    runCommand("git add .", tempDir);
+    // Commit and push the landing page changes
+    console.log("💾 Committing landing page changes...");
+    runCommand("git add apps/landing-page/public/embed/");
     runCommand(
-      `git commit -m "feat: add version ${version} of zenobia-pay components"`,
-      tempDir
+      `git commit -m "feat: add version ${version} of zenobia-pay components"`
     );
-    runCommand("git push", tempDir);
+    runCommand("git push");
 
     console.log("✅ Successfully deployed to landing page!");
   } catch (error) {
     console.error("❌ Error deploying to landing page:", error);
     process.exit(1);
-  } finally {
-    // Clean up temp directory
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (error) {
-      console.warn("⚠️  Could not clean up temp directory:", error);
-    }
   }
 
   console.log("\n🎉 Release completed successfully!");
