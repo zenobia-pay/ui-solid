@@ -83,6 +83,76 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
   const [isReconnecting, setIsReconnecting] = createSignal(false);
   const [websocketError, setWebsocketError] = createSignal<string | null>(null);
 
+  // Bouncing animation state
+  const [isBouncing, setIsBouncing] = createSignal(false);
+  const [bouncePosition, setBouncePosition] = createSignal({ x: 0, y: 0 });
+  const [bounceVelocity, setBounceVelocity] = createSignal({ x: 400, y: 400 });
+  let bounceAnimationId: number | null = null;
+  let modalRef: HTMLDivElement | null = null;
+
+  // Bouncing animation function
+  const startBouncing = () => {
+    if (isBouncing()) return;
+
+    // Calculate center position for the modal
+    const modalWidth = 400;
+    const modalHeight = 600;
+    const centerX = (window.innerWidth - modalWidth) / 2;
+    const centerY = (window.innerHeight - modalHeight) / 2;
+
+    setIsBouncing(true);
+    setBouncePosition({ x: centerX, y: centerY });
+    setBounceVelocity({ x: 400, y: 400 });
+
+    const animate = () => {
+      if (!isBouncing()) return;
+
+      const currentPos = bouncePosition();
+      const currentVel = bounceVelocity();
+
+      // Update position
+      const newX = currentPos.x + currentVel.x;
+      const newY = currentPos.y + currentVel.y;
+
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Check for collisions with screen edges
+      let newVelX = currentVel.x;
+      let newVelY = currentVel.y;
+
+      if (newX <= 0 || newX + modalWidth >= viewportWidth) {
+        newVelX = -newVelX;
+      }
+
+      if (newY <= 0 || newY + modalHeight >= viewportHeight) {
+        newVelY = -newVelY;
+      }
+
+      // Update state
+      setBouncePosition({
+        x: Math.max(0, Math.min(newX, viewportWidth - modalWidth)),
+        y: Math.max(0, Math.min(newY, viewportHeight - modalHeight)),
+      });
+      setBounceVelocity({ x: newVelX, y: newVelY });
+
+      bounceAnimationId = requestAnimationFrame(animate);
+    };
+
+    bounceAnimationId = requestAnimationFrame(animate);
+  };
+
+  const stopBouncing = () => {
+    setIsBouncing(false);
+    if (bounceAnimationId) {
+      cancelAnimationFrame(bounceAnimationId);
+      bounceAnimationId = null;
+    }
+    // Smoothly animate back to center
+    setBouncePosition({ x: 0, y: 0 });
+  };
+
   // Initialize WebSocket connection when modal opens
   createEffect(() => {
     if (props.isOpen && !zenobiaClient()) {
@@ -235,9 +305,9 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
     // Convert API status to our enum
     let currentStatus: TransferStatus;
     switch (status.status) {
-      case "COMPLETED":
-      case "IN_FLIGHT":
-        currentStatus = TransferStatus.COMPLETED;
+      case "SETTLED":
+      case "PAID":
+        currentStatus = TransferStatus.PAID;
         if (props.onSuccess && transferRequest()) {
           props.onSuccess(transferRequest()!, status);
         }
@@ -326,8 +396,12 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
     console.log("Scan update received:", scanData.scanType);
     if (scanData.scanType === "scanned") {
       setQrScanned(true);
+      // Start the bouncing animation when QR is scanned!
+      startBouncing();
     } else if (scanData.scanType === "unscanned") {
       setQrScanned(false);
+      // Stop bouncing when QR is unscanned
+      stopBouncing();
     }
   };
 
@@ -337,6 +411,8 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
     if (client) {
       client.disconnect();
     }
+    // Clean up bouncing animation
+    stopBouncing();
   });
 
   // Cleanup when modal closes
@@ -352,6 +428,8 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
       setIsReconnecting(false);
       setWebsocketError(null);
       setError(null);
+      // Stop bouncing when modal closes
+      stopBouncing();
     }
   });
 
@@ -378,7 +456,24 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
   return (
     <Show when={props.isOpen}>
       <div class="zenobia-qr-popup-overlay visible">
-        <div class="zenobia-qr-popup-content">
+        <div
+          class="zenobia-qr-popup-content"
+          style={{
+            transform: isBouncing()
+              ? `translate(${bouncePosition().x}px, ${bouncePosition().y}px)`
+              : "none",
+            transition: isBouncing()
+              ? "none"
+              : "transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+            position: isBouncing() ? "fixed" : "relative",
+            top: isBouncing() ? "0" : "auto",
+            left: isBouncing() ? "0" : "auto",
+            "z-index": isBouncing() ? "9999" : "auto",
+          }}
+          ref={(el) => {
+            modalRef = el;
+          }}
+        >
           <button class="zenobia-qr-close" onClick={props.onClose}>
             <svg
               viewBox="0 0 24 24"
