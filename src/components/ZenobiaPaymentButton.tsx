@@ -12,8 +12,8 @@ export interface CreateTransferRequestResponse {
 // Define the TransferStatus enum
 export enum TransferStatus {
   PENDING = "PENDING",
-  IN_FLIGHT = "IN_FLIGHT",
-  COMPLETED = "COMPLETED",
+  PAID = "PAID",
+  SETTLED = "SETTLED",
   FAILED = "FAILED",
   CANCELLED = "CANCELLED",
 }

@@ -235,9 +235,9 @@ export const ZenobiaPaymentModal: Component<ZenobiaPaymentModalProps> = (
     // Convert API status to our enum
     let currentStatus: TransferStatus;
     switch (status.status) {
-      case "COMPLETED":
-      case "IN_FLIGHT":
-        currentStatus = TransferStatus.COMPLETED;
+      case "SETTLED":
+      case "PAID":
+        currentStatus = TransferStatus.PAID;
         if (props.onSuccess && transferRequest()) {
           props.onSuccess(transferRequest()!, status);
         }
