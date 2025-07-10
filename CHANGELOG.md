@@ -1,5 +1,11 @@
 # Changoelog
 
+## 0.0.38
+
+### Patch Changes
+
+- Fix for bouncing animation
+
 ## 0.0.37
 
 ### Patch Changes
