@@ -25,6 +25,7 @@ export enum QrPosition {
   POPUP = "POPUP",
 }
 
+// Random comment
 // Define interface for client TransferStatus
 interface ClientTransferStatus {
   status: string;
